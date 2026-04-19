@@ -1,4 +1,12 @@
 {
-  "name": "alzeena-proxy",
-  "version": "1.0.0"
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }
