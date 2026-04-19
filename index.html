@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Fraud Checker BD — API Tool</title>
+  <title>Courier Checker — API Proxy</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Hind+Siliguri:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
@@ -21,9 +21,9 @@
             surface: '#0c1220',
             card: '#111827',
             border: 'rgba(148,163,184,0.1)',
-            accent: '#ef4444',
+            accent: '#f59e0b',
             safe: '#22c55e',
-            warn: '#eab308',
+            danger: '#ef4444',
             muted: '#64748b',
             fg: '#e2e8f0',
           },
@@ -32,272 +32,60 @@
     };
   </script>
   <style>
-    :root {
-      --accent: #ef4444;
-      --safe: #22c55e;
-      --warn: #eab308;
-      --bg: #060a13;
-      --surface: #0c1220;
-      --card: #111827;
-    }
-
+    :root { --accent: #f59e0b; --safe: #22c55e; --danger: #ef4444; --bg: #060a13; --surface: #0c1220; --card: #111827; }
     * { box-sizing: border-box; }
-    body {
-      font-family: 'Hind Siliguri', sans-serif;
-      background: var(--bg);
-      color: #e2e8f0;
-      margin: 0;
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    /* ===== ব্যাকগ্রাউন্ড গ্রিড প্যাটার্ন ===== */
-    .bg-grid {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      background-image:
-        linear-gradient(rgba(239,68,68,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(239,68,68,0.03) 1px, transparent 1px);
-      background-size: 60px 60px;
-      pointer-events: none;
-    }
-
-    /* ===== ফ্লোটিং অর্বস ===== */
-    .orb {
-      position: fixed;
-      border-radius: 50%;
-      filter: blur(80px);
-      pointer-events: none;
-      z-index: 0;
-      animation: orbFloat 20s ease-in-out infinite alternate;
-    }
-    .orb-1 {
-      width: 400px; height: 400px;
-      background: rgba(239,68,68,0.08);
-      top: -100px; right: -100px;
-    }
-    .orb-2 {
-      width: 300px; height: 300px;
-      background: rgba(34,197,94,0.06);
-      bottom: -50px; left: -80px;
-      animation-delay: -10s;
-    }
-    .orb-3 {
-      width: 200px; height: 200px;
-      background: rgba(234,179,8,0.05);
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      animation-delay: -5s;
-    }
-    @keyframes orbFloat {
-      0% { transform: translate(0, 0) scale(1); }
-      50% { transform: translate(30px, -40px) scale(1.1); }
-      100% { transform: translate(-20px, 20px) scale(0.95); }
-    }
-
-    /* ===== স্ক্যান লাইন অ্যানিমেশন ===== */
-    @keyframes scanLine {
-      0% { top: 0; opacity: 1; }
-      100% { top: 100%; opacity: 0; }
-    }
-    .scan-line {
-      position: absolute;
-      left: 0; right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--accent), transparent);
-      box-shadow: 0 0 15px var(--accent), 0 0 30px rgba(239,68,68,0.3);
-      animation: scanLine 1.5s ease-in-out infinite;
-      z-index: 10;
-    }
-
-    /* ===== গ্লোয়িং বর্ডার ===== */
-    .glow-border {
-      position: relative;
-    }
-    .glow-border::before {
-      content: '';
-      position: absolute;
-      inset: -1px;
-      border-radius: inherit;
-      background: linear-gradient(135deg, var(--accent), transparent 40%, transparent 60%, var(--accent));
-      z-index: -1;
-      opacity: 0.5;
-      transition: opacity 0.3s;
-    }
-    .glow-border:focus-within::before {
-      opacity: 1;
-      animation: borderRotate 3s linear infinite;
-    }
-    @keyframes borderRotate {
-      0% { background: linear-gradient(0deg, var(--accent), transparent 40%, transparent 60%, var(--accent)); }
-      25% { background: linear-gradient(90deg, var(--accent), transparent 40%, transparent 60%, var(--accent)); }
-      50% { background: linear-gradient(180deg, var(--accent), transparent 40%, transparent 60%, var(--accent)); }
-      75% { background: linear-gradient(270deg, var(--accent), transparent 40%, transparent 60%, var(--accent)); }
-      100% { background: linear-gradient(360deg, var(--accent), transparent 40%, transparent 60%, var(--accent)); }
-    }
-
-    /* ===== পালস বাটন ===== */
-    .btn-pulse {
-      position: relative;
-      overflow: hidden;
-    }
-    .btn-pulse::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
-      transform: translateX(-100%);
-      transition: none;
-    }
-    .btn-pulse:hover::after {
-      animation: btnShine 0.6s ease;
-    }
-    @keyframes btnShine {
-      to { transform: translateX(100%); }
-    }
-
-    /* ===== স্ট্যাটাস ব্যাজ ===== */
-    .badge-fraud {
-      background: rgba(239,68,68,0.15);
-      border: 1px solid rgba(239,68,68,0.4);
-      color: #fca5a5;
-    }
-    .badge-safe {
-      background: rgba(34,197,94,0.15);
-      border: 1px solid rgba(34,197,94,0.4);
-      color: #86efac;
-    }
-    .badge-warn {
-      background: rgba(234,179,8,0.15);
-      border: 1px solid rgba(234,179,8,0.4);
-      color: #fde047;
-    }
-    .badge-info {
-      background: rgba(59,130,246,0.15);
-      border: 1px solid rgba(59,130,246,0.4);
-      color: #93c5fd;
-    }
-
-    /* ===== টোস্ট ===== */
-    .toast {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      padding: 12px 20px;
-      border-radius: 10px;
-      font-size: 14px;
-      font-weight: 500;
-      z-index: 9999;
-      transform: translateY(100px);
-      opacity: 0;
-      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-      backdrop-filter: blur(12px);
-    }
-    .toast.show {
-      transform: translateY(0);
-      opacity: 1;
-    }
-    .toast-success {
-      background: rgba(34,197,94,0.2);
-      border: 1px solid rgba(34,197,94,0.4);
-      color: #86efac;
-    }
-    .toast-error {
-      background: rgba(239,68,68,0.2);
-      border: 1px solid rgba(239,68,68,0.4);
-      color: #fca5a5;
-    }
-
-    /* ===== টেবিল ===== */
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 14px;
-    }
-    .data-table th {
-      background: rgba(239,68,68,0.1);
-      color: #fca5a5;
-      padding: 10px 14px;
-      text-align: left;
-      font-weight: 600;
-      border-bottom: 1px solid rgba(239,68,68,0.2);
-    }
-    .data-table td {
-      padding: 10px 14px;
-      border-bottom: 1px solid rgba(148,163,184,0.08);
-      color: #cbd5e1;
-    }
-    .data-table tr:hover td {
-      background: rgba(148,163,184,0.03);
-    }
-
-    /* ===== লোডার ===== */
-    .loader-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: var(--accent);
-      animation: dotBounce 1.2s ease-in-out infinite;
-    }
+    body { font-family: 'Hind Siliguri', sans-serif; background: var(--bg); color: #e2e8f0; margin: 0; min-height: 100vh; overflow-x: hidden; }
+    .bg-grid { position: fixed; inset: 0; z-index: 0; background-image: linear-gradient(rgba(245,158,11,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(245,158,11,0.03) 1px, transparent 1px); background-size: 60px 60px; pointer-events: none; }
+    .orb { position: fixed; border-radius: 50%; filter: blur(80px); pointer-events: none; z-index: 0; animation: orbFloat 20s ease-in-out infinite alternate; }
+    .orb-1 { width: 400px; height: 400px; background: rgba(245,158,11,0.08); top: -100px; right: -100px; }
+    .orb-2 { width: 300px; height: 300px; background: rgba(34,197,94,0.06); bottom: -50px; left: -80px; animation-delay: -10s; }
+    @keyframes orbFloat { 0% { transform: translate(0,0) scale(1); } 50% { transform: translate(30px,-40px) scale(1.1); } 100% { transform: translate(-20px,20px) scale(0.95); } }
+    @keyframes scanLine { 0% { top: 0; opacity: 1; } 100% { top: 100%; opacity: 0; } }
+    .scan-line { position: absolute; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--accent), transparent); box-shadow: 0 0 15px var(--accent); animation: scanLine 1.5s ease-in-out infinite; z-index: 10; }
+    .glow-border { position: relative; }
+    .glow-border::before { content: ''; position: absolute; inset: -1px; border-radius: inherit; background: linear-gradient(135deg, var(--accent), transparent 40%, transparent 60%, var(--accent)); z-index: -1; opacity: 0.5; transition: opacity 0.3s; }
+    .glow-border:focus-within::before { opacity: 1; }
+    .btn-pulse { position: relative; overflow: hidden; }
+    .btn-pulse::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent); transform: translateX(-100%); }
+    .btn-pulse:hover::after { animation: btnShine 0.6s ease; }
+    @keyframes btnShine { to { transform: translateX(100%); } }
+    .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 10px; font-size: 14px; font-weight: 500; z-index: 9999; transform: translateY(100px); opacity: 0; transition: all 0.35s cubic-bezier(0.4,0,0.2,1); backdrop-filter: blur(12px); }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast-success { background: rgba(34,197,94,0.2); border: 1px solid rgba(34,197,94,0.4); color: #86efac; }
+    .toast-error { background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; }
+    .loader-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: dotBounce 1.2s ease-in-out infinite; }
     .loader-dot:nth-child(2) { animation-delay: 0.15s; }
     .loader-dot:nth-child(3) { animation-delay: 0.3s; }
-    @keyframes dotBounce {
-      0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-      40% { transform: scale(1); opacity: 1; }
-    }
-
-    /* ===== ফেড-ইন ===== */
-    .fade-in {
-      animation: fadeInUp 0.5s ease forwards;
-    }
-    @keyframes fadeInUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* ===== স্ক্রলবার ===== */
+    @keyframes dotBounce { 0%,80%,100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
+    .fade-in { animation: fadeInUp 0.5s ease forwards; }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .courier-card { transition: all 0.2s ease; }
+    .courier-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
+    .progress-bar { transition: width 1s cubic-bezier(0.4,0,0.2,1); }
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(239,68,68,0.3); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(239,68,68,0.5); }
-
-    /* ===== রেসপন্সিভ ===== */
-    @media (max-width: 640px) {
-      .hero-title { font-size: 1.75rem !important; }
-      .api-url-box { font-size: 11px !important; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        transition-duration: 0.01ms !important;
-      }
-    }
+    ::-webkit-scrollbar-thumb { background: rgba(245,158,11,0.3); border-radius: 3px; }
+    @media (max-width: 640px) { .hero-title { font-size: 1.75rem !important; } .api-url-box { font-size: 11px !important; } }
+    @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
   </style>
 </head>
 <body>
-  <!-- ব্যাকগ্রাউন্ড ইফেক্ট -->
   <div class="bg-grid"></div>
   <div class="orb orb-1"></div>
   <div class="orb orb-2"></div>
-  <div class="orb orb-3"></div>
-
-  <!-- টোস্ট কন্টেইনার -->
   <div id="toast" class="toast"></div>
 
-  <!-- মূল কন্টেন্ট -->
   <div class="relative z-10 min-h-screen flex flex-col">
-
-    <!-- ===== হেডার ===== -->
+    <!-- হেডার -->
     <header class="w-full py-5 px-6">
       <div class="max-w-4xl mx-auto flex items-center justify-between">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-accent/10 border border-accent/30 flex items-center justify-center">
-            <i class="fa-solid fa-shield-halved text-accent text-lg"></i>
+            <i class="fa-solid fa-truck-fast text-accent text-lg"></i>
           </div>
           <div>
-            <h1 class="text-lg font-bold text-fg leading-tight">Fraud Checker BD</h1>
-            <p class="text-xs text-muted">Automated Number Verification API</p>
+            <h1 class="text-lg font-bold text-fg leading-tight">Courier Checker</h1>
+            <p class="text-xs text-muted">Number Verification Proxy API</p>
           </div>
         </div>
         <a href="#api-section" class="text-sm text-muted hover:text-accent transition-colors">
@@ -306,618 +94,410 @@
       </div>
     </header>
 
-    <!-- ===== মেইন ===== -->
     <main class="flex-1 px-6 pb-16">
       <div class="max-w-4xl mx-auto">
 
-        <!-- হিরো সেকশন -->
+        <!-- হিরো -->
         <section class="text-center pt-10 pb-10">
           <h2 class="hero-title text-4xl md:text-5xl font-bold text-fg leading-tight">
-            নম্বর চেক করুন<br/>
-            <span class="text-accent">একটা ক্লিকেই</span>
+            নম্বর দিন<br/>
+            <span class="text-accent">কুরিয়ার ডেটা দেখুন</span>
           </h2>
           <p class="mt-4 text-muted text-lg max-w-xl mx-auto">
-            যেকোনো বাংলাদেশি মোবাইল নম্বর দিন, fraudcheckerbd.online থেকে রিয়েল-টাইম রেজাল্ট দেখুন
+            যেকোনো মোবাইল নম্বর দিন — Pathao, Steadfast সব কুরিয়ারের তথ্য একসাথে দেখুন
           </p>
         </section>
 
-        <!-- সার্চ কার্ড -->
+        <!-- সার্চ -->
         <section class="max-w-lg mx-auto">
           <div class="glow-border rounded-2xl">
             <div class="relative bg-card/80 backdrop-blur-xl rounded-2xl p-6 border border-border overflow-hidden" id="searchCard">
-              <!-- স্ক্যান লাইন (লোডিং এ দেখাবো) -->
               <div class="scan-line hidden" id="scanLine"></div>
-
               <label class="block text-sm font-semibold text-fg mb-3">
-                <i class="fa-solid fa-phone-volume text-accent mr-1"></i>
-                মোবাইল নম্বর
+                <i class="fa-solid fa-phone text-accent mr-1"></i> মোবাইল নম্বর
               </label>
-
               <div class="flex gap-3">
                 <div class="flex-1 relative">
                   <span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted text-sm font-mono font-semibold pointer-events-none">+880</span>
-                  <input
-                    type="tel"
-                    id="phoneInput"
-                    placeholder="17XXXXXXXX"
-                    maxlength="14"
-                    autocomplete="off"
+                  <input type="tel" id="phoneInput" placeholder="16XXXXXXXX" maxlength="14" autocomplete="off"
                     class="w-full bg-surface border border-border rounded-xl py-3.5 pl-16 pr-4 text-fg font-mono text-lg outline-none focus:border-accent/50 transition-colors placeholder:text-muted/50"
-                    aria-label="বাংলাদেশি মোবাইল নম্বর ইনপুট"
-                  />
+                    aria-label="মোবাইল নম্বর" />
                 </div>
-                <button
-                  id="searchBtn"
-                  onclick="checkNumber()"
-                  class="btn-pulse bg-accent hover:bg-red-600 text-white font-semibold px-6 rounded-xl transition-colors flex items-center gap-2 shrink-0"
-                  aria-label="নম্বর সার্চ করুন"
-                >
+                <button id="searchBtn" onclick="checkNumber()"
+                  class="btn-pulse bg-accent hover:bg-amber-600 text-black font-semibold px-6 rounded-xl transition-colors flex items-center gap-2 shrink-0">
                   <i class="fa-solid fa-magnifying-glass" id="searchIcon"></i>
                   <span id="searchText">চেক</span>
                 </button>
               </div>
-
-              <p class="mt-3 text-xs text-muted">
-                উদাহরণ: 01712345678, 8801712345678, +8801712345678
-              </p>
+              <p class="mt-3 text-xs text-muted">উদাহরণ: 01603746079, 8801603746079</p>
             </div>
           </div>
-
-          <!-- লোডিং স্টেট -->
           <div class="hidden mt-6 text-center" id="loadingState">
             <div class="flex items-center justify-center gap-2">
               <div class="loader-dot"></div>
               <div class="loader-dot"></div>
               <div class="loader-dot"></div>
             </div>
-            <p class="mt-3 text-sm text-muted" id="loadingText">সার্চ করা হচ্ছে...</p>
+            <p class="mt-3 text-sm text-muted">কুরিয়ার ডেটা আনা হচ্ছে...</p>
           </div>
         </section>
 
-        <!-- রেজাল্ট সেকশন -->
+        <!-- ডিবাগ -->
+        <div class="mt-6 text-center">
+          <button onclick="runTest()" class="text-xs text-muted/40 hover:text-accent transition-colors">
+            <i class="fa-solid fa-stethoscope mr-1"></i> API Health Check
+          </button>
+          <div class="hidden mt-3" id="testResult">
+            <pre id="testOutput" class="text-xs font-mono text-slate-500 bg-surface/50 rounded-xl p-4 text-left max-w-md mx-auto border border-border"></pre>
+          </div>
+        </div>
+
+        <!-- রেজাল্ট -->
         <section class="mt-10 hidden" id="resultSection">
-          <div class="fade-in">
-            <!-- স্ট্যাটাস ব্যাজ -->
-            <div class="flex items-center gap-3 mb-5">
-              <div id="statusBadge" class="px-4 py-2 rounded-full text-sm font-bold"></div>
-              <span class="text-muted text-sm font-mono" id="resultPhone"></span>
-              <span class="text-muted/40 text-xs ml-auto" id="resultTime"></span>
-            </div>
-
-            <!-- ডিটেইলস কার্ড -->
-            <div class="space-y-4" id="resultCards"></div>
-
-            <!-- র কন্টেন্ট -->
-            <div class="hidden mt-4" id="rawContentCard">
-              <div class="bg-card/60 backdrop-blur border border-border rounded-xl p-5">
-                <h4 class="text-sm font-bold text-muted mb-3">
-                  <i class="fa-solid fa-file-lines mr-1"></i> Raw Page Content
-                </h4>
-                <pre id="rawContent" class="text-xs text-slate-400 font-mono whitespace-pre-wrap break-words max-h-64 overflow-y-auto bg-surface/50 rounded-lg p-4"></pre>
-              </div>
-            </div>
-
-            <!-- JSON রেসপন্স -->
-            <div class="mt-4">
-              <button
-                onclick="toggleJson()"
-                class="text-xs text-muted hover:text-accent transition-colors flex items-center gap-1"
-              >
-                <i class="fa-solid fa-code"></i>
-                <span id="jsonToggleText">JSON Response দেখুন</span>
-                <i class="fa-solid fa-chevron-down text-[10px] ml-1 transition-transform" id="jsonChevron"></i>
-              </button>
-              <div class="hidden mt-3" id="jsonContainer">
-                <pre id="jsonOutput" class="text-xs text-slate-400 font-mono whitespace-pre-wrap break-words max-h-96 overflow-y-auto bg-surface/80 rounded-xl p-5 border border-border"></pre>
-              </div>
+          <div class="fade-in" id="resultContent"></div>
+          <!-- JSON -->
+          <div class="mt-4">
+            <button onclick="toggleJson()" class="text-xs text-muted hover:text-accent transition-colors flex items-center gap-1">
+              <i class="fa-solid fa-code"></i>
+              <span id="jsonToggleText">JSON Response দেখুন</span>
+              <i class="fa-solid fa-chevron-down text-[10px] ml-1 transition-transform" id="jsonChevron"></i>
+            </button>
+            <div class="hidden mt-3" id="jsonContainer">
+              <pre id="jsonOutput" class="text-xs text-slate-400 font-mono whitespace-pre-wrap break-words max-h-96 overflow-y-auto bg-surface/80 rounded-xl p-5 border border-border"></pre>
             </div>
           </div>
         </section>
 
-        <!-- এরর সেকশন -->
+        <!-- এরর -->
         <section class="mt-10 hidden" id="errorSection">
           <div class="bg-red-500/5 border border-red-500/20 rounded-xl p-6 text-center fade-in">
-            <i class="fa-solid fa-triangle-exclamation text-accent text-3xl mb-3"></i>
-            <p class="text-red-300 font-semibold" id="errorMessage">কিছু একটা সমস্যা হয়েছে</p>
+            <i class="fa-solid fa-triangle-exclamation text-danger text-3xl mb-3"></i>
+            <p class="text-red-300 font-semibold" id="errorMessage"></p>
             <p class="text-red-400/60 text-sm mt-1" id="errorDetail"></p>
           </div>
         </section>
 
-        <!-- ===== API ডকুমেন্টেশন ===== -->
+        <!-- API ডকস -->
         <section id="api-section" class="mt-20">
           <div class="text-center mb-8">
             <h3 class="text-2xl font-bold text-fg">API ডকুমেন্টেশন</h3>
-            <p class="text-muted mt-2">তোমার e-commerce সাইট থেকে সরাসরি API call করো</p>
+            <p class="text-muted mt-2">তোমার e-commerce থেকে সরাসরি কল করো</p>
           </div>
-
           <div class="bg-card/60 backdrop-blur border border-border rounded-2xl p-6 md:p-8">
             <!-- Endpoint -->
             <div class="mb-6">
               <span class="text-xs font-bold text-safe bg-safe/10 px-2 py-1 rounded">GET</span>
               <div class="mt-3 api-url-box relative bg-surface rounded-xl p-4 font-mono text-sm text-slate-300 border border-border flex items-center gap-3">
                 <code id="apiUrlDisplay" class="flex-1 break-all"></code>
-                <button
-                  onclick="copyApiUrl()"
-                  class="shrink-0 bg-accent/10 hover:bg-accent/20 text-accent px-3 py-2 rounded-lg transition-colors text-sm font-semibold"
-                  aria-label="API URL কপি করুন"
-                >
+                <button onclick="copyApiUrl()" class="shrink-0 bg-accent/10 hover:bg-accent/20 text-accent px-3 py-2 rounded-lg transition-colors text-sm font-semibold">
                   <i class="fa-regular fa-copy mr-1"></i> কপি
                 </button>
               </div>
             </div>
-
-            <!-- Query Params -->
+            <!-- Params -->
             <div class="mb-6">
               <h4 class="text-sm font-bold text-fg mb-3">Query Parameters</h4>
               <div class="bg-surface rounded-xl overflow-hidden border border-border">
                 <table class="w-full text-sm">
-                  <thead>
-                    <tr class="border-b border-border">
-                      <th class="text-left px-4 py-3 text-accent font-mono font-semibold">Parameter</th>
-                      <th class="text-left px-4 py-3 text-accent font-semibold">Type</th>
-                      <th class="text-left px-4 py-3 text-accent font-semibold">Description</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr class="border-b border-border/50">
-                      <td class="px-4 py-3 font-mono text-fg">phone</td>
-                      <td class="px-4 py-3 text-muted">string</td>
-                      <td class="px-4 py-3 text-muted">বাংলাদেশি মোবাইল নম্বর (01XXXXXXXXX)</td>
-                    </tr>
-                  </tbody>
+                  <thead><tr class="border-b border-border"><th class="text-left px-4 py-3 text-accent font-mono font-semibold">Parameter</th><th class="text-left px-4 py-3 text-accent font-semibold">Type</th><th class="text-left px-4 py-3 text-accent font-semibold">Description</th></tr></thead>
+                  <tbody><tr><td class="px-4 py-3 font-mono text-fg">phone</td><td class="px-4 py-3 text-muted">string</td><td class="px-4 py-3 text-muted">মোবাইল নম্বর</td></tr></tbody>
                 </table>
               </div>
             </div>
-
-            <!-- Response Format -->
+            <!-- Response -->
             <div class="mb-6">
-              <h4 class="text-sm font-bold text-fg mb-3">Response Format</h4>
+              <h4 class="text-sm font-bold text-fg mb-3">Response Example</h4>
               <pre class="bg-surface rounded-xl p-5 text-xs font-mono text-slate-400 border border-border overflow-x-auto">{
   "success": true,
-  "phone": "01712345678",
-  "checked_at": "2025-01-15T10:30:00.000Z",
-  "source": "fraudcheckerbd.online",
-  "status": "SAFE",
-  "status_label": "নিরাপদ",
-  "complaint_count": 0,
-  "details": [],
-  "tables": [],
-  "alerts": []
+  "status": "ok",
+  "phone": "01603746079",
+  "data": {
+    "Pathao": {
+      "total_parcels": 45,
+      "delivered": 40,
+      "cancelled": 5,
+      "success_rate": "88.89%"
+    },
+    "Steadfast": { ... }
+  }
 }</pre>
             </div>
-
-            <!-- Status Values -->
-            <div class="mb-6">
-              <h4 class="text-sm font-bold text-fg mb-3">Status Values</h4>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div class="flex items-center gap-3 bg-surface rounded-xl p-3 border border-border">
-                  <span class="badge-fraud px-3 py-1 rounded-full text-xs font-bold">FRAUD</span>
-                  <span class="text-sm text-muted">ফ্রড / প্রতারক</span>
-                </div>
-                <div class="flex items-center gap-3 bg-surface rounded-xl p-3 border border-border">
-                  <span class="badge-safe px-3 py-1 rounded-full text-xs font-bold">SAFE</span>
-                  <span class="text-sm text-muted">নিরাপদ</span>
-                </div>
-                <div class="flex items-center gap-3 bg-surface rounded-xl p-3 border border-border">
-                  <span class="badge-warn px-3 py-1 rounded-full text-xs font-bold">SUSPICIOUS</span>
-                  <span class="text-sm text-muted">সন্দেহজনক</span>
-                </div>
-                <div class="flex items-center gap-3 bg-surface rounded-xl p-3 border border-border">
-                  <span class="badge-info px-3 py-1 rounded-full text-xs font-bold">NOT_FOUND</span>
-                  <span class="text-sm text-muted">তথ্য নেই</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Code Examples -->
+            <!-- Code -->
             <div>
               <h4 class="text-sm font-bold text-fg mb-3">কোড উদাহরণ</h4>
               <div class="space-y-3">
-                <!-- JavaScript -->
                 <div class="bg-surface rounded-xl border border-border overflow-hidden">
-                  <button
-                    onclick="copyCode('jsExample')"
-                    class="w-full flex items-center justify-between px-4 py-2.5 text-xs font-semibold text-muted hover:text-fg transition-colors"
-                  >
-                    <span><i class="fa-brands fa-js text-yellow-400 mr-2"></i>JavaScript (Fetch)</span>
-                    <i class="fa-regular fa-copy"></i>
-                  </button>
-                  <pre id="jsExample" class="px-4 pb-4 text-xs font-mono text-slate-400 overflow-x-auto">const phone = '01712345678';
+                  <button onclick="copyCode('jsEx')" class="w-full flex items-center justify-between px-4 py-2.5 text-xs font-semibold text-muted hover:text-fg transition-colors"><span><i class="fa-brands fa-js text-yellow-400 mr-2"></i>JavaScript</span><i class="fa-regular fa-copy"></i></button>
+                  <pre id="jsEx" class="px-4 pb-4 text-xs font-mono text-slate-400 overflow-x-auto">const phone = '01603746079';
 const res = await fetch(
-  `API_URL_HERE/api/check?phone=${phone}`
+  `YOUR_VERCEL_URL/api/check?phone=${phone}`
 );
 const data = await res.json();
 
 if (data.success) {
-  console.log('Status:', data.status);
-  console.log('Label:', data.status_label);
-  console.log('Complaints:', data.complaint_count);
-  console.log('Details:', data.details);
-  console.log('Tables:', data.tables);
-} else {
-  console.error('Error:', data.error);
+  // data.data তে কুরিয়ার তথ্য আছে
+  Object.entries(data.data).forEach(([name, info]) => {
+    console.log(name, info);
+  });
 }</pre>
                 </div>
-
-                <!-- PHP -->
                 <div class="bg-surface rounded-xl border border-border overflow-hidden">
-                  <button
-                    onclick="copyCode('phpExample')"
-                    class="w-full flex items-center justify-between px-4 py-2.5 text-xs font-semibold text-muted hover:text-fg transition-colors"
-                  >
-                    <span><i class="fa-brands fa-php text-indigo-400 mr-2"></i>PHP (cURL)</span>
-                    <i class="fa-regular fa-copy"></i>
-                  </button>
-                  <pre id="phpExample" class="px-4 pb-4 text-xs font-mono text-slate-400 overflow-x-auto">$phone = '01712345678';
- $url = 'API_URL_HERE/api/check?phone=' . urlencode($phone);
+                  <button onclick="copyCode('phpEx')" class="w-full flex items-center justify-between px-4 py-2.5 text-xs font-semibold text-muted hover:text-fg transition-colors"><span><i class="fa-brands fa-php text-indigo-400 mr-2"></i>PHP</span><i class="fa-regular fa-copy"></i></button>
+                  <pre id="phpEx" class="px-4 pb-4 text-xs font-mono text-slate-400 overflow-x-auto">$phone = '01603746079';
+ $url = 'YOUR_VERCEL_URL/api/check?phone=' . urlencode($phone);
 
  $ch = curl_init();
 curl_setopt($ch, CURLOPT_URL, $url);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-
  $response = curl_exec($ch);
 curl_close($ch);
 
  $data = json_decode($response, true);
-
 if ($data['success']) {
-    echo 'Status: ' . $data['status'];
-    echo 'Label: ' . $data['status_label'];
+    foreach ($data['data'] as $name => $info) {
+        echo $name . ': ' . $info['total_parcels'] . ' parcels';
+    }
 }</pre>
-                </div>
-
-                <!-- Python -->
-                <div class="bg-surface rounded-xl border border-border overflow-hidden">
-                  <button
-                    onclick="copyCode('pyExample')"
-                    class="w-full flex items-center justify-between px-4 py-2.5 text-xs font-semibold text-muted hover:text-fg transition-colors"
-                  >
-                    <span><i class="fa-brands fa-python text-green-400 mr-2"></i>Python (Requests)</span>
-                    <i class="fa-regular fa-copy"></i>
-                  </button>
-                  <pre id="pyExample" class="px-4 pb-4 text-xs font-mono text-slate-400 overflow-x-auto">import requests
-
-phone = "01712345678"
-url = f"API_URL_HERE/api/check?phone={phone}"
-
-resp = requests.get(url, timeout=10)
-data = resp.json()
-
-if data["success"]:
-    print(f"Status: {data['status']}")
-    print(f"Label: {data['status_label']}")
-    print(f"Complaints: {data.get('complaint_count', 'N/A')}")
-else:
-    print(f"Error: {data['error']}")</pre>
                 </div>
               </div>
             </div>
           </div>
         </section>
-
       </div>
     </main>
 
-    <!-- ===== ফুটার ===== -->
     <footer class="py-6 px-6 border-t border-border">
-      <div class="max-w-4xl mx-auto text-center text-xs text-muted">
-        Fraud Checker BD API Tool &mdash; Data sourced from fraudcheckerbd.online
-      </div>
+      <div class="max-w-4xl mx-auto text-center text-xs text-muted">Courier Checker Proxy &mdash; Data from alzeena-checker.lovable.app</div>
     </footer>
   </div>
 
   <script>
-    // ===== গ্লোবাল ভ্যারিয়েবল =====
     let lastResponse = null;
     let jsonVisible = false;
 
-    // ===== API URL সেট করা =====
-    function getApiBaseUrl() {
-      // Vercel deploy হলে automatic নিজের URL নেবে
-      return window.location.origin;
-    }
+    function getApiBaseUrl() { return window.location.origin; }
 
-    // পেজ লোড হলে API URL দেখানো
     document.addEventListener('DOMContentLoaded', () => {
-      const base = getApiBaseUrl();
-      document.getElementById('apiUrlDisplay').textContent =
-        base + '/api/check?phone=01712345678';
+      document.getElementById('apiUrlDisplay').textContent = getApiBaseUrl() + '/api/check?phone=01603746079';
     });
 
-    // ===== ফোন নম্বর ইনপুট ফরম্যাটিং =====
     const phoneInput = document.getElementById('phoneInput');
-    phoneInput.addEventListener('input', (e) => {
-      // শুধু ডিজিট আর + রাখা
-      e.target.value = e.target.value.replace(/[^0-9+]/g, '');
-    });
+    phoneInput.addEventListener('input', (e) => { e.target.value = e.target.value.replace(/[^0-9+]/g, ''); });
+    phoneInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') checkNumber(); });
 
-    // Enter কী দিয়ে সার্চ
-    phoneInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') checkNumber();
-    });
-
-    // ===== মেইন চেক ফাংশন =====
     async function checkNumber() {
-      const rawPhone = phoneInput.value.trim();
+      const raw = phoneInput.value.trim();
+      if (!raw) { showToast('নম্বর দিন', 'error'); phoneInput.focus(); return; }
+      let digits = raw.replace(/[^0-9]/g, '');
+      if (digits.startsWith('880') && digits.length === 13) digits = '0' + digits.substring(3);
 
-      // ভ্যালিডেশন
-      if (!rawPhone) {
-        showToast('নম্বর দিন', 'error');
-        phoneInput.focus();
-        return;
-      }
-
-      // নম্বর normalize
-      let digits = rawPhone.replace(/[^0-9]/g, '');
-      if (digits.startsWith('880') && digits.length === 13) {
-        digits = '0' + digits.substring(3);
-      }
-
-      if (digits.length !== 11 || !digits.startsWith('01')) {
-        showToast('সঠিক বাংলাদেশি নম্বর দিন (01XXXXXXXXX)', 'error');
-        return;
-      }
-
-      // UI আপডেট — লোডিং স্টেট
-      setLoading(true);
-      hideResult();
-      hideError();
-
+      setLoading(true); hideResult(); hideError();
       try {
         const apiUrl = getApiBaseUrl() + '/api/check?phone=' + encodeURIComponent(digits);
-        const response = await fetch(apiUrl);
-        const data = await response.json();
-        lastResponse = data;
-
-        if (data.success) {
-          showResult(data);
-        } else {
-          showError(data.error || 'Unknown error');
+        const resp = await fetch(apiUrl);
+        if (!resp.ok) {
+          let body = '';
+          try { body = await resp.text(); } catch(e) {}
+          throw new Error('HTTP ' + resp.status + (body ? ': ' + body.substring(0, 200) : ''));
         }
+        const data = await resp.json();
+        lastResponse = data;
+        if (data.success) { showResult(data); }
+        else { showError(data.error || 'Unknown error'); }
       } catch (err) {
-        showError('API তে সমস্যা হয়েছে: ' + err.message);
-      } finally {
-        setLoading(false);
-      }
+        let msg = err.message;
+        if (msg.includes('Failed to fetch')) msg = 'API তে সংযোগ করা যায়নি। /api/test দিয়ে চেক করো।';
+        showError(msg);
+      } finally { setLoading(false); }
     }
 
-    // ===== লোডিং স্টেট =====
-    function setLoading(isLoading) {
+    function setLoading(on) {
       const btn = document.getElementById('searchBtn');
       const icon = document.getElementById('searchIcon');
       const text = document.getElementById('searchText');
-      const loading = document.getElementById('loadingState');
-      const scanLine = document.getElementById('scanLine');
-
-      if (isLoading) {
-        btn.disabled = true;
-        btn.classList.add('opacity-60', 'cursor-not-allowed');
-        icon.className = 'fa-solid fa-spinner fa-spin';
-        text.textContent = 'চেক হচ্ছে...';
-        loading.classList.remove('hidden');
-        scanLine.classList.remove('hidden');
+      if (on) {
+        btn.disabled = true; btn.classList.add('opacity-60','cursor-not-allowed');
+        icon.className = 'fa-solid fa-spinner fa-spin'; text.textContent = 'চেক হচ্ছে...';
+        document.getElementById('loadingState').classList.remove('hidden');
+        document.getElementById('scanLine').classList.remove('hidden');
       } else {
-        btn.disabled = false;
-        btn.classList.remove('opacity-60', 'cursor-not-allowed');
-        icon.className = 'fa-solid fa-magnifying-glass';
-        text.textContent = 'চেক';
-        loading.classList.add('hidden');
-        scanLine.classList.add('hidden');
+        btn.disabled = false; btn.classList.remove('opacity-60','cursor-not-allowed');
+        icon.className = 'fa-solid fa-magnifying-glass'; text.textContent = 'চেক';
+        document.getElementById('loadingState').classList.add('hidden');
+        document.getElementById('scanLine').classList.add('hidden');
       }
     }
 
-    // ===== রেজাল্ট দেখানো =====
     function showResult(data) {
       const section = document.getElementById('resultSection');
-      const badge = document.getElementById('statusBadge');
-      const phoneEl = document.getElementById('resultPhone');
-      const timeEl = document.getElementById('resultTime');
-      const cardsEl = document.getElementById('resultCards');
-
+      const content = document.getElementById('resultContent');
       section.classList.remove('hidden');
+      content.innerHTML = '';
 
-      // ফোন নম্বর ও সময়
-      phoneEl.textContent = data.phone;
-      if (data.checked_at) {
-        const d = new Date(data.checked_at);
-        timeEl.textContent = d.toLocaleString('bn-BD');
-      }
+      // ফোন হেডার
+      let html = '<div class="flex items-center gap-3 mb-6">';
+      html += '<div class="px-4 py-2 rounded-full text-sm font-bold bg-safe/15 border border-safe/40 text-green-300 flex items-center gap-2"><i class="fa-solid fa-circle-check"></i> ' + escapeHtml(data.status || 'OK') + '</div>';
+      html += '<span class="text-muted text-sm font-mono">' + escapeHtml(data.phone || '') + '</span>';
+      html += '</div>';
 
-      // স্ট্যাটাস ব্যাজ
-      const statusConfig = {
-        FRAUD:      { cls: 'badge-fraud', icon: 'fa-skull-crossbones', label: 'FRAUD' },
-        SAFE:       { cls: 'badge-safe',  icon: 'fa-shield-check',     label: 'SAFE' },
-        SUSPICIOUS: { cls: 'badge-warn',  icon: 'fa-triangle-exclamation', label: 'SUSPICIOUS' },
-        NOT_FOUND:  { cls: 'badge-info',  icon: 'fa-circle-question',  label: 'NOT FOUND' },
-        NO_RESULT:  { cls: 'badge-info',  icon: 'fa-circle-info',      label: 'NO RESULT' },
-      };
+      // কুরিয়ার ডেটা — ডাইনামিক রেন্ডার
+      const courierData = data.data || data;
 
-      const sc = statusConfig[data.status] || { cls: 'badge-info', icon: 'fa-circle-info', label: data.status || 'UNKNOWN' };
-      badge.className = 'px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 ' + sc.cls;
-      badge.innerHTML = '<i class="fa-solid ' + sc.icon + '"></i> ' + (data.status_label || sc.label);
+      // যদি data object হয়
+      if (typeof courierData === 'object' && courierData !== null) {
+        const entries = Object.entries(courierData).filter(([k]) => k !== 'success' && k !== 'status' && k !== 'phone');
 
-      // কার্ড তৈরি
-      cardsEl.innerHTML = '';
+        if (entries.length > 0) {
+          html += '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">';
 
-      // Complaint count কার্ড
-      if (data.complaint_count !== null && data.complaint_count !== undefined) {
-        cardsEl.appendChild(createCard(
-          '<i class="fa-solid fa-flag text-accent mr-2"></i> অভিযোগ সংখ্যা',
-          '<span class="text-3xl font-bold ' + (data.complaint_count > 0 ? 'text-accent' : 'text-safe') + '">' + data.complaint_count + '</span> টি রিপোর্ট পাওয়া গেছে'
-        ));
-      }
+          entries.forEach(([name, info]) => {
+            if (typeof info !== 'object' || info === null) return;
 
-      // Alerts কার্ড
-      if (data.alerts && data.alerts.length > 0) {
-        const alertsHtml = data.alerts.map(a => {
-          const colorMap = { danger: 'text-red-400', success: 'text-green-400', warning: 'text-yellow-400', info: 'text-blue-400' };
-          const iconMap = { danger: 'fa-circle-xmark', success: 'fa-circle-check', warning: 'fa-triangle-exclamation', info: 'fa-circle-info' };
-          return '<div class="flex items-start gap-2 py-2 border-b border-border/30 last:border-0">' +
-            '<i class="fa-solid ' + (iconMap[a.type] || 'fa-circle-info') + ' ' + (colorMap[a.type] || 'text-blue-400') + ' mt-0.5"></i>' +
-            '<span class="text-sm text-slate-300">' + escapeHtml(a.text) + '</span>' +
-            '</div>';
-        }).join('');
-        cardsEl.appendChild(createCardRaw('<i class="fa-solid fa-bell text-warn mr-2"></i> নোটিফিকেশন', alertsHtml));
-      }
+            // সাফল্যের হার বের করা
+            let rate = 0;
+            let totalP = 0;
+            let delivered = 0;
+            let cancelled = 0;
 
-      // Details কার্ড
-      if (data.details && data.details.length > 0) {
-        const detailsHtml = data.details.map(d =>
-          '<p class="text-sm text-slate-300 py-2 border-b border-border/30 last:border-0 whitespace-pre-wrap">' + escapeHtml(d) + '</p>'
-        ).join('');
-        cardsEl.appendChild(createCardRaw('<i class="fa-solid fa-list text-fg mr-2"></i> বিস্তারিত', detailsHtml));
-      }
+            // বিভিন্ন key format handle
+            const keys = Object.keys(info);
+            keys.forEach(k => {
+              const lk = k.toLowerCase();
+              if (lk.includes('total') || lk.includes('পার্সেল') || lk.includes('parcel')) totalP = parseInt(info[k]) || 0;
+              if (lk.includes('deliver') || lk.includes('ডেলিভার')) delivered = parseInt(info[k]) || 0;
+              if (lk.includes('cancel') || lk.includes('বাতিল')) cancelled = parseInt(info[k]) || 0;
+              if (lk.includes('rate') || lk.includes('হার') || lk.includes('success')) rate = parseFloat(String(info[k]).replace('%', '')) || 0;
+            });
 
-      // Tables কার্ড
-      if (data.tables && data.tables.length > 0) {
-        data.tables.forEach((table, idx) => {
-          let tableHtml = '<div class="overflow-x-auto"><table class="data-table"><thead>';
-          if (table.length > 0) {
-            tableHtml += '<tr>';
-            table[0].forEach(cell => { tableHtml += '<th>' + escapeHtml(cell) + '</th>'; });
-            tableHtml += '</tr></thead><tbody>';
-            for (let i = 1; i < table.length; i++) {
-              tableHtml += '<tr>';
-              table[i].forEach(cell => { tableHtml += '<td>' + escapeHtml(cell) + '</td>'; });
-              tableHtml += '</tr>';
+            if (!rate && totalP > 0) {
+              rate = totalP > 0 ? ((delivered / totalP) * 100) : 0;
             }
-          }
-          tableHtml += '</tbody></table></div>';
-          cardsEl.appendChild(createCardRaw(
-            '<i class="fa-solid fa-table text-fg mr-2"></i> টেবিল ' + (data.tables.length > 1 ? (idx + 1) : ''),
-            tableHtml
-          ));
-        });
+
+            // রং নির্ধারণ
+            let barColor = 'bg-green-500';
+            let textColor = 'text-green-400';
+            if (rate < 50) { barColor = 'bg-red-500'; textColor = 'text-red-400'; }
+            else if (rate < 75) { barColor = 'bg-yellow-500'; textColor = 'text-yellow-400'; }
+
+            html += '<div class="courier-card bg-card/60 backdrop-blur border border-border rounded-xl p-5">';
+            html += '<div class="flex items-center justify-between mb-4">';
+            html += '<h4 class="text-base font-bold text-fg">' + escapeHtml(name) + '</h4>';
+            html += '<span class="text-lg font-bold font-mono ' + textColor + '">' + rate.toFixed(1) + '%</span>';
+            html += '</div>';
+
+            // Progress bar
+            html += '<div class="w-full h-2 bg-surface rounded-full mb-4 overflow-hidden">';
+            html += '<div class="progress-bar h-full rounded-full ' + barColor + '" style="width: 0%" data-width="' + Math.min(rate, 100) + '%"></div>';
+            html += '</div>';
+
+            // Stats grid
+            html += '<div class="grid grid-cols-3 gap-2 text-center">';
+            html += '<div class="bg-surface rounded-lg py-2 px-1"><p class="text-xs text-muted">মোট</p><p class="text-sm font-bold text-fg font-mono">' + totalP + '</p></div>';
+            html += '<div class="bg-surface rounded-lg py-2 px-1"><p class="text-xs text-muted">ডেলিভার</p><p class="text-sm font-bold text-green-400 font-mono">' + delivered + '</p></div>';
+            html += '<div class="bg-surface rounded-lg py-2 px-1"><p class="text-xs text-muted">বাতিল</p><p class="text-sm font-bold text-red-400 font-mono">' + cancelled + '</p></div>';
+            html += '</div>';
+
+            // অন্যান্য ফিল্ড
+            const otherKeys = keys.filter(k => {
+              const lk = k.toLowerCase();
+              return !lk.includes('total') && !lk.includes('parcel') && !lk.includes('পার্সেল') &&
+                     !lk.includes('deliver') && !lk.includes('ডেলিভার') &&
+                     !lk.includes('cancel') && !lk.includes('বাতিল') &&
+                     !lk.includes('rate') && !lk.includes('হার') && !lk.includes('success');
+            });
+
+            if (otherKeys.length > 0) {
+              html += '<div class="mt-3 pt-3 border-t border-border/50 space-y-1">';
+              otherKeys.forEach(k => {
+                html += '<div class="flex justify-between text-xs"><span class="text-muted">' + escapeHtml(k) + '</span><span class="text-slate-300 font-mono">' + escapeHtml(String(info[k])) + '</span></div>';
+              });
+              html += '</div>';
+            }
+
+            html += '</div>';
+          });
+
+          html += '</div>';
+        } else {
+          // কোনো কুরিয়ার ডেটা না পাওয়া গেলে
+          html += '<div class="bg-card/60 border border-border rounded-xl p-6 text-center">';
+          html += '<i class="fa-solid fa-box-open text-muted text-3xl mb-3"></i>';
+          html += '<p class="text-muted">এই নম্বরে কোনো কুরিয়ার ডেটা পাওয়া যায়নি</p>';
+          html += '</div>';
+        }
       }
 
-      // Note
-      if (data.note || data.extraction_note) {
-        cardsEl.appendChild(createCard(
-          '<i class="fa-solid fa-circle-info text-blue-400 mr-2"></i> নোট',
-          '<p class="text-sm text-blue-300/80">' + escapeHtml(data.note || data.extraction_note) + '</p>'
-        ));
-      }
+      content.innerHTML = html;
 
-      // Raw content
-      if (data.raw_content) {
-        document.getElementById('rawContent').textContent = data.raw_content;
-        document.getElementById('rawContentCard').classList.remove('hidden');
-      } else {
-        document.getElementById('rawContentCard').classList.add('hidden');
-      }
+      // Progress bar animate
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          document.querySelectorAll('.progress-bar').forEach(bar => {
+            bar.style.width = bar.dataset.width;
+          });
+        }, 100);
+      });
 
-      // JSON রিসেট
+      // JSON
       jsonVisible = false;
       document.getElementById('jsonContainer').classList.add('hidden');
       document.getElementById('jsonChevron').style.transform = '';
       document.getElementById('jsonToggleText').textContent = 'JSON Response দেখুন';
       document.getElementById('jsonOutput').textContent = JSON.stringify(data, null, 2);
 
-      // স্ক্রল করে রেজাল্টে যাও
       section.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    // ===== কার্ড তৈরি হেল্পার =====
-    function createCard(title, content) {
-      const div = document.createElement('div');
-      div.className = 'bg-card/60 backdrop-blur border border-border rounded-xl p-5 fade-in';
-      div.innerHTML = '<h4 class="text-sm font-bold text-fg mb-3">' + title + '</h4>' +
-        '<div>' + content + '</div>';
-      return div;
-    }
-
-    function createCardRaw(title, rawHtml) {
-      const div = document.createElement('div');
-      div.className = 'bg-card/60 backdrop-blur border border-border rounded-xl p-5 fade-in';
-      div.innerHTML = '<h4 class="text-sm font-bold text-fg mb-3">' + title + '</h4>' +
-        '<div>' + rawHtml + '</div>';
-      return div;
-    }
-
-    // ===== এরর দেখানো =====
-    function showError(msg, detail) {
-      const section = document.getElementById('errorSection');
-      section.classList.remove('hidden');
+    function showError(msg) {
+      document.getElementById('errorSection').classList.remove('hidden');
       document.getElementById('errorMessage').textContent = msg || 'সমস্যা হয়েছে';
-      document.getElementById('errorDetail').textContent = detail || '';
-      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById('errorDetail').textContent = '';
+      document.getElementById('errorSection').scrollIntoView({ behavior: 'smooth' });
     }
-    function hideError() {
-      document.getElementById('errorSection').classList.add('hidden');
-    }
-    function hideResult() {
-      document.getElementById('resultSection').classList.add('hidden');
-    }
+    function hideError() { document.getElementById('errorSection').classList.add('hidden'); }
+    function hideResult() { document.getElementById('resultSection').classList.add('hidden'); }
 
-    // ===== JSON টগল =====
     function toggleJson() {
       jsonVisible = !jsonVisible;
-      const container = document.getElementById('jsonContainer');
-      const chevron = document.getElementById('jsonChevron');
-      const text = document.getElementById('jsonToggleText');
+      document.getElementById('jsonContainer').classList.toggle('hidden', !jsonVisible);
+      document.getElementById('jsonChevron').style.transform = jsonVisible ? 'rotate(180deg)' : '';
+      document.getElementById('jsonToggleText').textContent = jsonVisible ? 'JSON লুকান' : 'JSON Response দেখুন';
+    }
 
-      if (jsonVisible) {
-        container.classList.remove('hidden');
-        chevron.style.transform = 'rotate(180deg)';
-        text.textContent = 'JSON লুকান';
-      } else {
-        container.classList.add('hidden');
-        chevron.style.transform = '';
-        text.textContent = 'JSON Response দেখুন';
+    async function runTest() {
+      const d = document.getElementById('testResult');
+      const p = document.getElementById('testOutput');
+      d.classList.remove('hidden');
+      p.textContent = 'Checking...';
+      try {
+        const r = await fetch(getApiBaseUrl() + '/api/test');
+        const data = await r.json();
+        p.textContent = JSON.stringify(data, null, 2);
+      } catch(e) {
+        p.textContent = 'Failed: ' + e.message;
       }
     }
 
-    // ===== কপি ফাংশন =====
     function copyApiUrl() {
-      const url = document.getElementById('apiUrlDisplay').textContent;
-      navigator.clipboard.writeText(url).then(() => {
-        showToast('API URL কপি হয়েছে', 'success');
-      }).catch(() => {
-        fallbackCopy(url);
-        showToast('API URL কপি হয়েছে', 'success');
-      });
+      navigator.clipboard.writeText(document.getElementById('apiUrlDisplay').textContent)
+        .then(() => showToast('API URL কপি হয়েছে', 'success'))
+        .catch(() => { fallbackCopy(document.getElementById('apiUrlDisplay').textContent); showToast('কপি হয়েছে', 'success'); });
     }
-
-    function copyCode(elementId) {
-      const code = document.getElementById(elementId).textContent;
-      navigator.clipboard.writeText(code).then(() => {
-        showToast('কোড কপি হয়েছে', 'success');
-      }).catch(() => {
-        fallbackCopy(code);
-        showToast('কোড কপি হয়েছে', 'success');
-      });
+    function copyCode(id) {
+      navigator.clipboard.writeText(document.getElementById(id).textContent)
+        .then(() => showToast('কোড কপি হয়েছে', 'success'))
+        .catch(() => { fallbackCopy(document.getElementById(id).textContent); showToast('কপি হয়েছে', 'success'); });
     }
-
     function fallbackCopy(text) {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.position = 'fixed';
-      ta.style.left = '-9999px';
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
+      const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
     }
-
-    // ===== টোস্ট =====
-    function showToast(message, type) {
-      const toast = document.getElementById('toast');
-      toast.textContent = message;
-      toast.className = 'toast toast-' + (type || 'success') + ' show';
-      clearTimeout(toast._timer);
-      toast._timer = setTimeout(() => {
-        toast.classList.remove('show');
-      }, 2500);
+    function showToast(msg, type) {
+      const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast toast-' + (type||'success') + ' show';
+      clearTimeout(t._timer); t._timer = setTimeout(() => t.classList.remove('show'), 2500);
     }
-
-    // ===== HTML Escape =====
-    function escapeHtml(str) {
-      if (!str) return '';
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
-    }
+    function escapeHtml(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
   </script>
 </body>
 </html>
