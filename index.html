@@ -3,501 +3,585 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Courier Checker — API Proxy</title>
+  <title>Courier Reputation Checker</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Hind+Siliguri:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <script>
     tailwind.config = {
       theme: {
         extend: {
           fontFamily: {
-            body: ['Hind Siliguri', 'sans-serif'],
+            sans: ['Inter', 'sans-serif'],
             mono: ['JetBrains Mono', 'monospace'],
-          },
-          colors: {
-            bg: '#060a13',
-            surface: '#0c1220',
-            card: '#111827',
-            border: 'rgba(148,163,184,0.1)',
-            accent: '#f59e0b',
-            safe: '#22c55e',
-            danger: '#ef4444',
-            muted: '#64748b',
-            fg: '#e2e8f0',
           },
         },
       },
     };
   </script>
   <style>
-    :root { --accent: #f59e0b; --safe: #22c55e; --danger: #ef4444; --bg: #060a13; --surface: #0c1220; --card: #111827; }
-    * { box-sizing: border-box; }
-    body { font-family: 'Hind Siliguri', sans-serif; background: var(--bg); color: #e2e8f0; margin: 0; min-height: 100vh; overflow-x: hidden; }
-    .bg-grid { position: fixed; inset: 0; z-index: 0; background-image: linear-gradient(rgba(245,158,11,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(245,158,11,0.03) 1px, transparent 1px); background-size: 60px 60px; pointer-events: none; }
-    .orb { position: fixed; border-radius: 50%; filter: blur(80px); pointer-events: none; z-index: 0; animation: orbFloat 20s ease-in-out infinite alternate; }
-    .orb-1 { width: 400px; height: 400px; background: rgba(245,158,11,0.08); top: -100px; right: -100px; }
-    .orb-2 { width: 300px; height: 300px; background: rgba(34,197,94,0.06); bottom: -50px; left: -80px; animation-delay: -10s; }
-    @keyframes orbFloat { 0% { transform: translate(0,0) scale(1); } 50% { transform: translate(30px,-40px) scale(1.1); } 100% { transform: translate(-20px,20px) scale(0.95); } }
-    @keyframes scanLine { 0% { top: 0; opacity: 1; } 100% { top: 100%; opacity: 0; } }
-    .scan-line { position: absolute; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--accent), transparent); box-shadow: 0 0 15px var(--accent); animation: scanLine 1.5s ease-in-out infinite; z-index: 10; }
-    .glow-border { position: relative; }
-    .glow-border::before { content: ''; position: absolute; inset: -1px; border-radius: inherit; background: linear-gradient(135deg, var(--accent), transparent 40%, transparent 60%, var(--accent)); z-index: -1; opacity: 0.5; transition: opacity 0.3s; }
-    .glow-border:focus-within::before { opacity: 1; }
-    .btn-pulse { position: relative; overflow: hidden; }
-    .btn-pulse::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent); transform: translateX(-100%); }
-    .btn-pulse:hover::after { animation: btnShine 0.6s ease; }
-    @keyframes btnShine { to { transform: translateX(100%); } }
-    .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 10px; font-size: 14px; font-weight: 500; z-index: 9999; transform: translateY(100px); opacity: 0; transition: all 0.35s cubic-bezier(0.4,0,0.2,1); backdrop-filter: blur(12px); }
-    .toast.show { transform: translateY(0); opacity: 1; }
-    .toast-success { background: rgba(34,197,94,0.2); border: 1px solid rgba(34,197,94,0.4); color: #86efac; }
-    .toast-error { background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; }
-    .loader-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: dotBounce 1.2s ease-in-out infinite; }
-    .loader-dot:nth-child(2) { animation-delay: 0.15s; }
-    .loader-dot:nth-child(3) { animation-delay: 0.3s; }
-    @keyframes dotBounce { 0%,80%,100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
-    .fade-in { animation: fadeInUp 0.5s ease forwards; }
-    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    .courier-card { transition: all 0.2s ease; }
-    .courier-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
-    .progress-bar { transition: width 1s cubic-bezier(0.4,0,0.2,1); }
-    ::-webkit-scrollbar { width: 6px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0a0a;
+      color: #ffffff;
+      min-height: 100vh;
+    }
+
+    /* সূক্ষ্ম গ্রিড ব্যাকগ্রাউন্ড */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        radial-gradient(circle at 1px 1px, rgba(255,255,255,0.03) 1px, transparent 0);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* গ্লো ইফেক্ট */
+    .top-glow {
+      position: fixed;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 600px;
+      height: 400px;
+      background: radial-gradient(ellipse, rgba(251,191,36,0.08) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* সার্চ ইনপুট */
+    .search-input {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      transition: all 0.3s ease;
+    }
+    .search-input:focus {
+      outline: none;
+      border-color: rgba(251,191,36,0.5);
+      box-shadow: 0 0 0 3px rgba(251,191,36,0.1);
+      background: rgba(255,255,255,0.07);
+    }
+
+    /* সার্চ বাটন */
+    .search-btn {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      transition: all 0.2s ease;
+    }
+    .search-btn:hover {
+      background: linear-gradient(135deg, #fbbf24, #f59e0b);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 15px rgba(251,191,36,0.3);
+    }
+    .search-btn:active { transform: translateY(0); }
+    .search-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* কার্ড */
+    .card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      transition: all 0.25s ease;
+    }
+    .card:hover {
+      background: rgba(255,255,255,0.05);
+      border-color: rgba(255,255,255,0.1);
+    }
+
+    /* সামারি কার্ড */
+    .summary-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px;
+      padding: 20px;
+      text-align: center;
+    }
+
+    /* সাকসেস রেট বড় নম্বর */
+    .rate-number {
+      font-size: 4rem;
+      font-weight: 900;
+      line-height: 1;
+      background: linear-gradient(135deg, #22c55e, #4ade80);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .rate-number.warning {
+      background: linear-gradient(135deg, #eab308, #facc15);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+    .rate-number.danger {
+      background: linear-gradient(135deg, #ef4444, #f87171);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+
+    /* কুরিয়ার কার্ড */
+    .courier-item {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px;
+      padding: 18px 20px;
+      transition: all 0.25s ease;
+    }
+    .courier-item:hover {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.12);
+      transform: translateY(-1px);
+    }
+
+    /* প্রোগ্রেস বার */
+    .progress-track {
+      height: 6px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+      width: 0;
+    }
+    .progress-fill.green { background: linear-gradient(90deg, #22c55e, #4ade80); }
+    .progress-fill.yellow { background: linear-gradient(90deg, #eab308, #facc15); }
+    .progress-fill.red { background: linear-gradient(90deg, #ef4444, #f87171); }
+
+    /* No data */
+    .no-data {
+      background: rgba(255,255,255,0.02);
+      border: 1px dashed rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 18px 20px;
+    }
+
+    /* লোডার */
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2px solid rgba(0,0,0,0.2);
+      border-top-color: #000;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ফেড ইন */
+    .fade-up {
+      animation: fadeUp 0.5s ease forwards;
+      opacity: 0;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up-d1 { animation-delay: 0.05s; }
+    .fade-up-d2 { animation-delay: 0.1s; }
+    .fade-up-d3 { animation-delay: 0.15s; }
+    .fade-up-d4 { animation-delay: 0.2s; }
+    .fade-up-d5 { animation-delay: 0.25s; }
+
+    /* টোস্ট */
+    .toast-container {
+      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    }
+    .toast-msg {
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.3s ease;
+    }
+    .toast-msg.show { transform: translateY(0); opacity: 1; }
+    .toast-ok { background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3); color: #86efac; }
+    .toast-err { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; }
+
+    /* JSON toggle */
+    .json-pre {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+      font-size: 11px;
+      line-height: 1.6;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    /* স্ক্রলবার */
+    ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(245,158,11,0.3); border-radius: 3px; }
-    @media (max-width: 640px) { .hero-title { font-size: 1.75rem !important; } .api-url-box { font-size: 11px !important; } }
-    @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
   </style>
 </head>
 <body>
-  <div class="bg-grid"></div>
-  <div class="orb orb-1"></div>
-  <div class="orb orb-2"></div>
-  <div id="toast" class="toast"></div>
+  <div class="top-glow"></div>
+  <div class="toast-container"><div id="toast" class="toast-msg"></div></div>
 
   <div class="relative z-10 min-h-screen flex flex-col">
+
     <!-- হেডার -->
-    <header class="w-full py-5 px-6">
-      <div class="max-w-4xl mx-auto flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-accent/10 border border-accent/30 flex items-center justify-center">
-            <i class="fa-solid fa-truck-fast text-accent text-lg"></i>
+    <header class="w-full px-6 py-5">
+      <div class="max-w-2xl mx-auto flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+            <i class="fa-solid fa-truck-fast text-amber-400 text-sm"></i>
           </div>
-          <div>
-            <h1 class="text-lg font-bold text-fg leading-tight">Courier Checker</h1>
-            <p class="text-xs text-muted">Number Verification Proxy API</p>
-          </div>
+          <span class="text-sm font-semibold text-white/90">Courier Rep</span>
         </div>
-        <a href="#api-section" class="text-sm text-muted hover:text-accent transition-colors">
-          <i class="fa-solid fa-code mr-1"></i> API Docs
-        </a>
+        <a href="#api-docs" class="text-xs text-white/30 hover:text-white/60 transition-colors">API Docs</a>
       </div>
     </header>
 
-    <main class="flex-1 px-6 pb-16">
-      <div class="max-w-4xl mx-auto">
+    <main class="flex-1 px-6 pb-20">
+      <div class="max-w-2xl mx-auto">
 
-        <!-- হিরো -->
-        <section class="text-center pt-10 pb-10">
-          <h2 class="hero-title text-4xl md:text-5xl font-bold text-fg leading-tight">
-            নম্বর দিন<br/>
-            <span class="text-accent">কুরিয়ার ডেটা দেখুন</span>
-          </h2>
-          <p class="mt-4 text-muted text-lg max-w-xl mx-auto">
-            যেকোনো মোবাইল নম্বর দিন — Pathao, Steadfast সব কুরিয়ারের তথ্য একসাথে দেখুন
-          </p>
-        </section>
+        <!-- টাইটেল -->
+        <div class="text-center pt-8 pb-8">
+          <h1 class="text-2xl md:text-3xl font-bold text-white/90 leading-snug">
+            Check any number's<br/>courier reputation
+          </h1>
+          <p class="mt-3 text-sm text-white/30">Enter a phone number to see courier history & success rate</p>
+        </div>
 
-        <!-- সার্চ -->
-        <section class="max-w-lg mx-auto">
-          <div class="glow-border rounded-2xl">
-            <div class="relative bg-card/80 backdrop-blur-xl rounded-2xl p-6 border border-border overflow-hidden" id="searchCard">
-              <div class="scan-line hidden" id="scanLine"></div>
-              <label class="block text-sm font-semibold text-fg mb-3">
-                <i class="fa-solid fa-phone text-accent mr-1"></i> মোবাইল নম্বর
-              </label>
-              <div class="flex gap-3">
-                <div class="flex-1 relative">
-                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted text-sm font-mono font-semibold pointer-events-none">+880</span>
-                  <input type="tel" id="phoneInput" placeholder="16XXXXXXXX" maxlength="14" autocomplete="off"
-                    class="w-full bg-surface border border-border rounded-xl py-3.5 pl-16 pr-4 text-fg font-mono text-lg outline-none focus:border-accent/50 transition-colors placeholder:text-muted/50"
-                    aria-label="মোবাইল নম্বর" />
-                </div>
-                <button id="searchBtn" onclick="checkNumber()"
-                  class="btn-pulse bg-accent hover:bg-amber-600 text-black font-semibold px-6 rounded-xl transition-colors flex items-center gap-2 shrink-0">
-                  <i class="fa-solid fa-magnifying-glass" id="searchIcon"></i>
-                  <span id="searchText">চেক</span>
-                </button>
-              </div>
-              <p class="mt-3 text-xs text-muted">উদাহরণ: 01603746079, 8801603746079</p>
+        <!-- সার্চ বক্স -->
+        <div class="max-w-md mx-auto mb-10">
+          <div class="flex gap-2.5">
+            <div class="flex-1 relative">
+              <span class="absolute left-4 top-1/2 -translate-y-1/2 text-white/25 text-sm font-mono font-medium select-none">+880</span>
+              <input
+                type="tel"
+                id="phoneInput"
+                placeholder="1603746079"
+                maxlength="14"
+                autocomplete="off"
+                class="search-input w-full rounded-xl py-3.5 pl-[68px] pr-4 text-white font-mono text-base"
+                aria-label="Phone number"
+              />
             </div>
-          </div>
-          <div class="hidden mt-6 text-center" id="loadingState">
-            <div class="flex items-center justify-center gap-2">
-              <div class="loader-dot"></div>
-              <div class="loader-dot"></div>
-              <div class="loader-dot"></div>
-            </div>
-            <p class="mt-3 text-sm text-muted">কুরিয়ার ডেটা আনা হচ্ছে...</p>
-          </div>
-        </section>
-
-        <!-- ডিবাগ -->
-        <div class="mt-6 text-center">
-          <button onclick="runTest()" class="text-xs text-muted/40 hover:text-accent transition-colors">
-            <i class="fa-solid fa-stethoscope mr-1"></i> API Health Check
-          </button>
-          <div class="hidden mt-3" id="testResult">
-            <pre id="testOutput" class="text-xs font-mono text-slate-500 bg-surface/50 rounded-xl p-4 text-left max-w-md mx-auto border border-border"></pre>
+            <button
+              id="searchBtn"
+              onclick="checkNumber()"
+              class="search-btn text-black font-semibold text-sm px-6 rounded-xl flex items-center gap-2 shrink-0"
+            >
+              <i class="fa-solid fa-magnifying-glass text-xs" id="searchIcon"></i>
+              <span id="searchLabel">Search</span>
+            </button>
           </div>
         </div>
 
+        <!-- লোডিং -->
+        <div id="loadingState" class="hidden text-center py-10">
+          <div class="spinner mx-auto mb-3"></div>
+          <p class="text-xs text-white/30">Fetching courier data...</p>
+        </div>
+
         <!-- রেজাল্ট -->
-        <section class="mt-10 hidden" id="resultSection">
-          <div class="fade-in" id="resultContent"></div>
-          <!-- JSON -->
-          <div class="mt-4">
-            <button onclick="toggleJson()" class="text-xs text-muted hover:text-accent transition-colors flex items-center gap-1">
-              <i class="fa-solid fa-code"></i>
-              <span id="jsonToggleText">JSON Response দেখুন</span>
-              <i class="fa-solid fa-chevron-down text-[10px] ml-1 transition-transform" id="jsonChevron"></i>
-            </button>
-            <div class="hidden mt-3" id="jsonContainer">
-              <pre id="jsonOutput" class="text-xs text-slate-400 font-mono whitespace-pre-wrap break-words max-h-96 overflow-y-auto bg-surface/80 rounded-xl p-5 border border-border"></pre>
-            </div>
-          </div>
-        </section>
+        <div id="resultSection" class="hidden"></div>
 
         <!-- এরর -->
-        <section class="mt-10 hidden" id="errorSection">
-          <div class="bg-red-500/5 border border-red-500/20 rounded-xl p-6 text-center fade-in">
-            <i class="fa-solid fa-triangle-exclamation text-danger text-3xl mb-3"></i>
-            <p class="text-red-300 font-semibold" id="errorMessage"></p>
-            <p class="text-red-400/60 text-sm mt-1" id="errorDetail"></p>
+        <div id="errorSection" class="hidden">
+          <div class="text-center py-10">
+            <i class="fa-solid fa-circle-xmark text-red-400/50 text-2xl mb-3"></i>
+            <p class="text-sm text-red-300/80" id="errorMsg"></p>
           </div>
-        </section>
+        </div>
 
         <!-- API ডকস -->
-        <section id="api-section" class="mt-20">
-          <div class="text-center mb-8">
-            <h3 class="text-2xl font-bold text-fg">API ডকুমেন্টেশন</h3>
-            <p class="text-muted mt-2">তোমার e-commerce থেকে সরাসরি কল করো</p>
+        <section id="api-docs" class="mt-16">
+          <div class="text-center mb-6">
+            <h3 class="text-lg font-bold text-white/70">API Documentation</h3>
+            <p class="text-xs text-white/25 mt-1">Use this endpoint in your e-commerce system</p>
           </div>
-          <div class="bg-card/60 backdrop-blur border border-border rounded-2xl p-6 md:p-8">
-            <!-- Endpoint -->
-            <div class="mb-6">
-              <span class="text-xs font-bold text-safe bg-safe/10 px-2 py-1 rounded">GET</span>
-              <div class="mt-3 api-url-box relative bg-surface rounded-xl p-4 font-mono text-sm text-slate-300 border border-border flex items-center gap-3">
-                <code id="apiUrlDisplay" class="flex-1 break-all"></code>
-                <button onclick="copyApiUrl()" class="shrink-0 bg-accent/10 hover:bg-accent/20 text-accent px-3 py-2 rounded-lg transition-colors text-sm font-semibold">
-                  <i class="fa-regular fa-copy mr-1"></i> কপি
-                </button>
-              </div>
+          <div class="card p-5">
+            <div class="flex items-center gap-2 mb-4">
+              <span class="text-[10px] font-bold text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded">GET</span>
+              <code id="apiUrlBox" class="text-xs text-white/50 font-mono flex-1 truncate"></code>
+              <button onclick="copyUrl()" class="text-[10px] text-white/30 hover:text-white/60 transition-colors"><i class="fa-regular fa-copy"></i></button>
             </div>
-            <!-- Params -->
-            <div class="mb-6">
-              <h4 class="text-sm font-bold text-fg mb-3">Query Parameters</h4>
-              <div class="bg-surface rounded-xl overflow-hidden border border-border">
-                <table class="w-full text-sm">
-                  <thead><tr class="border-b border-border"><th class="text-left px-4 py-3 text-accent font-mono font-semibold">Parameter</th><th class="text-left px-4 py-3 text-accent font-semibold">Type</th><th class="text-left px-4 py-3 text-accent font-semibold">Description</th></tr></thead>
-                  <tbody><tr><td class="px-4 py-3 font-mono text-fg">phone</td><td class="px-4 py-3 text-muted">string</td><td class="px-4 py-3 text-muted">মোবাইল নম্বর</td></tr></tbody>
-                </table>
-              </div>
-            </div>
-            <!-- Response -->
-            <div class="mb-6">
-              <h4 class="text-sm font-bold text-fg mb-3">Response Example</h4>
-              <pre class="bg-surface rounded-xl p-5 text-xs font-mono text-slate-400 border border-border overflow-x-auto">{
+            <pre class="json-pre p-4 text-white/40 font-mono">{
   "success": true,
   "status": "ok",
   "phone": "01603746079",
   "data": {
-    "Pathao": {
-      "total_parcels": 45,
-      "delivered": 40,
-      "cancelled": 5,
-      "success_rate": "88.89%"
-    },
-    "Steadfast": { ... }
+    "Pathao": { "total_parcels": 2, "delivered": 2, "cancelled": 0 },
+    "SteadFast": { "total_parcels": 1, "delivered": 1, "cancelled": 0 }
   }
 }</pre>
-            </div>
-            <!-- Code -->
-            <div>
-              <h4 class="text-sm font-bold text-fg mb-3">কোড উদাহরণ</h4>
-              <div class="space-y-3">
-                <div class="bg-surface rounded-xl border border-border overflow-hidden">
-                  <button onclick="copyCode('jsEx')" class="w-full flex items-center justify-between px-4 py-2.5 text-xs font-semibold text-muted hover:text-fg transition-colors"><span><i class="fa-brands fa-js text-yellow-400 mr-2"></i>JavaScript</span><i class="fa-regular fa-copy"></i></button>
-                  <pre id="jsEx" class="px-4 pb-4 text-xs font-mono text-slate-400 overflow-x-auto">const phone = '01603746079';
-const res = await fetch(
-  `YOUR_VERCEL_URL/api/check?phone=${phone}`
-);
-const data = await res.json();
-
-if (data.success) {
-  // data.data তে কুরিয়ার তথ্য আছে
-  Object.entries(data.data).forEach(([name, info]) => {
-    console.log(name, info);
-  });
-}</pre>
-                </div>
-                <div class="bg-surface rounded-xl border border-border overflow-hidden">
-                  <button onclick="copyCode('phpEx')" class="w-full flex items-center justify-between px-4 py-2.5 text-xs font-semibold text-muted hover:text-fg transition-colors"><span><i class="fa-brands fa-php text-indigo-400 mr-2"></i>PHP</span><i class="fa-regular fa-copy"></i></button>
-                  <pre id="phpEx" class="px-4 pb-4 text-xs font-mono text-slate-400 overflow-x-auto">$phone = '01603746079';
- $url = 'YOUR_VERCEL_URL/api/check?phone=' . urlencode($phone);
-
- $ch = curl_init();
-curl_setopt($ch, CURLOPT_URL, $url);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_TIMEOUT, 10);
- $response = curl_exec($ch);
-curl_close($ch);
-
- $data = json_decode($response, true);
-if ($data['success']) {
-    foreach ($data['data'] as $name => $info) {
-        echo $name . ': ' . $info['total_parcels'] . ' parcels';
-    }
-}</pre>
-                </div>
+            <div class="mt-4 space-y-2">
+              <div class="bg-white/[0.02] rounded-lg p-3">
+                <p class="text-[10px] text-white/25 mb-1.5">PHP Example</p>
+                <code class="text-[11px] text-white/40 font-mono">$res = file_get_contents('YOUR_URL/api/check?phone=' . urlencode($phone));<br/>$data = json_decode($res, true);</code>
+              </div>
+              <div class="bg-white/[0.02] rounded-lg p-3">
+                <p class="text-[10px] text-white/25 mb-1.5">JavaScript Example</p>
+                <code class="text-[11px] text-white/40 font-mono">const res = await fetch('/api/check?phone=' + phone);<br/>const data = await res.json();</code>
               </div>
             </div>
           </div>
         </section>
+
       </div>
     </main>
 
-    <footer class="py-6 px-6 border-t border-border">
-      <div class="max-w-4xl mx-auto text-center text-xs text-muted">Courier Checker Proxy &mdash; Data from alzeena-checker.lovable.app</div>
-    </footer>
   </div>
 
   <script>
-    let lastResponse = null;
-    let jsonVisible = false;
-
-    function getApiBaseUrl() { return window.location.origin; }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('apiUrlDisplay').textContent = getApiBaseUrl() + '/api/check?phone=01603746079';
-    });
-
     const phoneInput = document.getElementById('phoneInput');
-    phoneInput.addEventListener('input', (e) => { e.target.value = e.target.value.replace(/[^0-9+]/g, ''); });
-    phoneInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') checkNumber(); });
+    phoneInput.addEventListener('input', e => { e.target.value = e.target.value.replace(/[^0-9+]/g, ''); });
+    phoneInput.addEventListener('keydown', e => { if (e.key === 'Enter') checkNumber(); });
+
+    // API URL দেখানো
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('apiUrlBox').textContent = location.origin + '/api/check?phone=01603746079';
+    });
 
     async function checkNumber() {
       const raw = phoneInput.value.trim();
-      if (!raw) { showToast('নম্বর দিন', 'error'); phoneInput.focus(); return; }
+      if (!raw) { toast('Enter a phone number', 'err'); phoneInput.focus(); return; }
+
       let digits = raw.replace(/[^0-9]/g, '');
       if (digits.startsWith('880') && digits.length === 13) digits = '0' + digits.substring(3);
 
-      setLoading(true); hideResult(); hideError();
+      setLoading(true);
+      document.getElementById('resultSection').classList.add('hidden');
+      document.getElementById('errorSection').classList.add('hidden');
+
       try {
-        const apiUrl = getApiBaseUrl() + '/api/check?phone=' + encodeURIComponent(digits);
-        const resp = await fetch(apiUrl);
-        if (!resp.ok) {
-          let body = '';
-          try { body = await resp.text(); } catch(e) {}
-          throw new Error('HTTP ' + resp.status + (body ? ': ' + body.substring(0, 200) : ''));
-        }
+        const url = location.origin + '/api/check?phone=' + encodeURIComponent(digits);
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
         const data = await resp.json();
-        lastResponse = data;
-        if (data.success) { showResult(data); }
-        else { showError(data.error || 'Unknown error'); }
-      } catch (err) {
-        let msg = err.message;
-        if (msg.includes('Failed to fetch')) msg = 'API তে সংযোগ করা যায়নি। /api/test দিয়ে চেক করো।';
-        showError(msg);
-      } finally { setLoading(false); }
+
+        if (data.success) {
+          renderResult(data);
+        } else {
+          showError(data.error || 'Request failed');
+        }
+      } catch (e) {
+        showError(e.message.includes('Failed to fetch') ? 'Cannot connect to API' : e.message);
+      } finally {
+        setLoading(false);
+      }
     }
 
     function setLoading(on) {
       const btn = document.getElementById('searchBtn');
       const icon = document.getElementById('searchIcon');
-      const text = document.getElementById('searchText');
+      const label = document.getElementById('searchLabel');
+      const loading = document.getElementById('loadingState');
+
       if (on) {
-        btn.disabled = true; btn.classList.add('opacity-60','cursor-not-allowed');
-        icon.className = 'fa-solid fa-spinner fa-spin'; text.textContent = 'চেক হচ্ছে...';
-        document.getElementById('loadingState').classList.remove('hidden');
-        document.getElementById('scanLine').classList.remove('hidden');
+        btn.disabled = true;
+        icon.className = '';
+        icon.style.display = 'none';
+        const sp = document.createElement('div');
+        sp.className = 'spinner';
+        sp.id = 'btnSpinner';
+        btn.insertBefore(sp, label);
+        label.textContent = 'Searching...';
+        loading.classList.remove('hidden');
       } else {
-        btn.disabled = false; btn.classList.remove('opacity-60','cursor-not-allowed');
-        icon.className = 'fa-solid fa-magnifying-glass'; text.textContent = 'চেক';
-        document.getElementById('loadingState').classList.add('hidden');
-        document.getElementById('scanLine').classList.add('hidden');
+        btn.disabled = false;
+        icon.style.display = '';
+        icon.className = 'fa-solid fa-magnifying-glass text-xs';
+        const sp = document.getElementById('btnSpinner');
+        if (sp) sp.remove();
+        label.textContent = 'Search';
+        loading.classList.add('hidden');
       }
     }
 
-    function showResult(data) {
-      const section = document.getElementById('resultSection');
-      const content = document.getElementById('resultContent');
-      section.classList.remove('hidden');
-      content.innerHTML = '';
+    function renderResult(data) {
+      const el = document.getElementById('resultSection');
+      el.classList.remove('hidden');
 
-      // ফোন হেডার
-      let html = '<div class="flex items-center gap-3 mb-6">';
-      html += '<div class="px-4 py-2 rounded-full text-sm font-bold bg-safe/15 border border-safe/40 text-green-300 flex items-center gap-2"><i class="fa-solid fa-circle-check"></i> ' + escapeHtml(data.status || 'OK') + '</div>';
-      html += '<span class="text-muted text-sm font-mono">' + escapeHtml(data.phone || '') + '</span>';
-      html += '</div>';
+      const courierData = data.data || {};
+      const entries = Object.entries(courierData).filter(([k]) =>
+        typeof courierData[k] === 'object' && courierData[k] !== null
+      );
 
-      // কুরিয়ার ডেটা — ডাইনামিক রেন্ডার
-      const courierData = data.data || data;
-
-      // যদি data object হয়
-      if (typeof courierData === 'object' && courierData !== null) {
-        const entries = Object.entries(courierData).filter(([k]) => k !== 'success' && k !== 'status' && k !== 'phone');
-
-        if (entries.length > 0) {
-          html += '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">';
-
-          entries.forEach(([name, info]) => {
-            if (typeof info !== 'object' || info === null) return;
-
-            // সাফল্যের হার বের করা
-            let rate = 0;
-            let totalP = 0;
-            let delivered = 0;
-            let cancelled = 0;
-
-            // বিভিন্ন key format handle
-            const keys = Object.keys(info);
-            keys.forEach(k => {
-              const lk = k.toLowerCase();
-              if (lk.includes('total') || lk.includes('পার্সেল') || lk.includes('parcel')) totalP = parseInt(info[k]) || 0;
-              if (lk.includes('deliver') || lk.includes('ডেলিভার')) delivered = parseInt(info[k]) || 0;
-              if (lk.includes('cancel') || lk.includes('বাতিল')) cancelled = parseInt(info[k]) || 0;
-              if (lk.includes('rate') || lk.includes('হার') || lk.includes('success')) rate = parseFloat(String(info[k]).replace('%', '')) || 0;
-            });
-
-            if (!rate && totalP > 0) {
-              rate = totalP > 0 ? ((delivered / totalP) * 100) : 0;
-            }
-
-            // রং নির্ধারণ
-            let barColor = 'bg-green-500';
-            let textColor = 'text-green-400';
-            if (rate < 50) { barColor = 'bg-red-500'; textColor = 'text-red-400'; }
-            else if (rate < 75) { barColor = 'bg-yellow-500'; textColor = 'text-yellow-400'; }
-
-            html += '<div class="courier-card bg-card/60 backdrop-blur border border-border rounded-xl p-5">';
-            html += '<div class="flex items-center justify-between mb-4">';
-            html += '<h4 class="text-base font-bold text-fg">' + escapeHtml(name) + '</h4>';
-            html += '<span class="text-lg font-bold font-mono ' + textColor + '">' + rate.toFixed(1) + '%</span>';
-            html += '</div>';
-
-            // Progress bar
-            html += '<div class="w-full h-2 bg-surface rounded-full mb-4 overflow-hidden">';
-            html += '<div class="progress-bar h-full rounded-full ' + barColor + '" style="width: 0%" data-width="' + Math.min(rate, 100) + '%"></div>';
-            html += '</div>';
-
-            // Stats grid
-            html += '<div class="grid grid-cols-3 gap-2 text-center">';
-            html += '<div class="bg-surface rounded-lg py-2 px-1"><p class="text-xs text-muted">মোট</p><p class="text-sm font-bold text-fg font-mono">' + totalP + '</p></div>';
-            html += '<div class="bg-surface rounded-lg py-2 px-1"><p class="text-xs text-muted">ডেলিভার</p><p class="text-sm font-bold text-green-400 font-mono">' + delivered + '</p></div>';
-            html += '<div class="bg-surface rounded-lg py-2 px-1"><p class="text-xs text-muted">বাতিল</p><p class="text-sm font-bold text-red-400 font-mono">' + cancelled + '</p></div>';
-            html += '</div>';
-
-            // অন্যান্য ফিল্ড
-            const otherKeys = keys.filter(k => {
-              const lk = k.toLowerCase();
-              return !lk.includes('total') && !lk.includes('parcel') && !lk.includes('পার্সেল') &&
-                     !lk.includes('deliver') && !lk.includes('ডেলিভার') &&
-                     !lk.includes('cancel') && !lk.includes('বাতিল') &&
-                     !lk.includes('rate') && !lk.includes('হার') && !lk.includes('success');
-            });
-
-            if (otherKeys.length > 0) {
-              html += '<div class="mt-3 pt-3 border-t border-border/50 space-y-1">';
-              otherKeys.forEach(k => {
-                html += '<div class="flex justify-between text-xs"><span class="text-muted">' + escapeHtml(k) + '</span><span class="text-slate-300 font-mono">' + escapeHtml(String(info[k])) + '</span></div>';
-              });
-              html += '</div>';
-            }
-
-            html += '</div>';
-          });
-
-          html += '</div>';
-        } else {
-          // কোনো কুরিয়ার ডেটা না পাওয়া গেলে
-          html += '<div class="bg-card/60 border border-border rounded-xl p-6 text-center">';
-          html += '<i class="fa-solid fa-box-open text-muted text-3xl mb-3"></i>';
-          html += '<p class="text-muted">এই নম্বরে কোনো কুরিয়ার ডেটা পাওয়া যায়নি</p>';
-          html += '</div>';
-        }
-      }
-
-      content.innerHTML = html;
-
-      // Progress bar animate
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          document.querySelectorAll('.progress-bar').forEach(bar => {
-            bar.style.width = bar.dataset.width;
-          });
-        }, 100);
+      // মোট হিসাব
+      let totalOrders = 0, totalDelivered = 0, totalCancelled = 0;
+      entries.forEach(([_, info]) => {
+        const keys = Object.keys(info);
+        keys.forEach(k => {
+          const lk = k.toLowerCase();
+          const v = parseInt(info[k]) || 0;
+          if (lk.includes('total') || lk.includes('parcel') || lk.includes('পার্সেল')) totalOrders += v;
+          if (lk.includes('deliver') || lk.includes('ডেলিভার')) totalDelivered += v;
+          if (lk.includes('cancel') || lk.includes('বাতিল')) totalCancelled += v;
+        });
       });
 
-      // JSON
-      jsonVisible = false;
-      document.getElementById('jsonContainer').classList.add('hidden');
-      document.getElementById('jsonChevron').style.transform = '';
-      document.getElementById('jsonToggleText').textContent = 'JSON Response দেখুন';
-      document.getElementById('jsonOutput').textContent = JSON.stringify(data, null, 2);
+      const successRate = totalOrders > 0 ? ((totalDelivered / totalOrders) * 100) : 0;
 
-      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // রেট ক্লাস
+      let rateClass = '';
+      if (successRate >= 80) rateClass = '';
+      else if (successRate >= 50) rateClass = 'warning';
+      else rateClass = 'danger';
+
+      // বার ক্লাস
+      let barClass = 'green';
+      if (successRate < 50) barClass = 'red';
+      else if (successRate < 80) barClass = 'yellow';
+
+      let html = '';
+
+      // === সামারি সেকশন ===
+      html += '<div class="fade-up mb-8">';
+      // বড় রেট
+      html += '<div class="text-center mb-6">';
+      html += '<div class="rate-number ' + rateClass + '">' + successRate.toFixed(1) + '%</div>';
+      html += '<p class="text-xs text-white/25 mt-1.5 tracking-wider uppercase">Success Rate</p>';
+      html += '</div>';
+
+      // ফোন নম্বর ব্যাজ
+      html += '<div class="flex justify-center mb-6">';
+      html += '<div class="inline-flex items-center gap-2 bg-white/[0.04] border border-white/[0.06] rounded-full px-4 py-2">';
+      html += '<i class="fa-solid fa-phone text-[10px] text-white/25"></i>';
+      html += '<span class="text-sm font-mono text-white/60 tracking-wider">' + esc(data.phone || '') + '</span>';
+      html += '</div>';
+      html += '</div>';
+
+      // ৩টা স্ট্যাট কার্ড
+      html += '<div class="grid grid-cols-3 gap-3">';
+      html += statCard('TOTAL ORDERS', totalOrders, 'text-white/90');
+      html += statCard('DELIVERED', totalDelivered, 'text-emerald-400');
+      html += statCard('CANCELLED', totalCancelled, 'text-red-400');
+      html += '</div>';
+      html += '</div>';
+
+      // === কুরিয়ার ব্রেকডাউন ===
+      html += '<div class="fade-up fade-up-d2">';
+      html += '<div class="flex items-center justify-between mb-4">';
+      html += '<h3 class="text-xs font-semibold text-white/40 tracking-wider uppercase">Courier Breakdown</h3>';
+      html += '<span class="text-[10px] text-white/20">' + entries.length + ' couriers</span>';
+      html += '</div>';
+
+      if (entries.length > 0) {
+        html += '<div class="space-y-2.5">';
+        entries.forEach(([name, info], idx) => {
+          let t = 0, d = 0, c = 0, r = 0;
+          Object.keys(info).forEach(k => {
+            const lk = k.toLowerCase();
+            const v = parseInt(info[k]) || 0;
+            if (lk.includes('total') || lk.includes('parcel') || lk.includes('পার্সেল')) t = v;
+            if (lk.includes('deliver') || lk.includes('ডেলিভার')) d = v;
+            if (lk.includes('cancel') || lk.includes('বাতিল')) c = v;
+            if (lk.includes('rate') || lk.includes('হার') || lk.includes('success')) r = parseFloat(String(info[k]).replace('%','')) || 0;
+          });
+          if (!r && t > 0) r = (d / t) * 100;
+          if (!t) t = d + c;
+
+          let bc = 'green';
+          if (r < 50) bc = 'red';
+          else if (r < 80) bc = 'yellow';
+
+          let rc = 'text-emerald-400';
+          if (r < 50) rc = 'text-red-400';
+          else if (r < 80) rc = 'text-amber-400';
+
+          html += '<div class="courier-item fade-up" style="animation-delay:' + (0.08 * idx) + 's">';
+          html += '<div class="flex items-center justify-between mb-2.5">';
+          html += '<span class="text-sm font-semibold text-white/80">' + esc(name) + '</span>';
+          html += '<span class="text-xs font-mono ' + rc + '">' + r.toFixed(0) + '%</span>';
+          html += '</div>';
+          html += '<div class="progress-track mb-2.5"><div class="progress-fill ' + bc + '" data-w="' + Math.min(r,100) + '"></div></div>';
+          html += '<div class="flex items-center justify-between">';
+          html += '<span class="text-[11px] text-white/25">' + t + ' parcels</span>';
+          html += '<span class="text-[11px] text-white/25">' + d + ' delivered &middot; ' + c + ' cancelled</span>';
+          html += '</div>';
+          html += '</div>';
+        });
+        html += '</div>';
+      } else {
+        html += '<div class="no-data text-center py-8">';
+        html += '<p class="text-xs text-white/20">No courier data found for this number</p>';
+        html += '</div>';
+      }
+      html += '</div>';
+
+      // === JSON Toggle ===
+      html += '<div class="fade-up fade-up-d5 mt-6">';
+      html += '<button onclick="toggleJson()" class="text-[11px] text-white/20 hover:text-white/40 transition-colors flex items-center gap-1.5">';
+      html += '<i class="fa-solid fa-code text-[9px]"></i>';
+      html += '<span id="jsonToggleLabel">View JSON Response</span>';
+      html += '<i class="fa-solid fa-chevron-down text-[8px] transition-transform" id="jsonChev"></i>';
+      html += '</button>';
+      html += '<div id="jsonBox" class="hidden mt-3"><pre class="json-pre p-4 text-white/35 font-mono">' + esc(JSON.stringify(data, null, 2)) + '</pre></div>';
+      html += '</div>';
+
+      el.innerHTML = html;
+
+      // প্রোগ্রেস বার অ্যানিমেট
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          el.querySelectorAll('.progress-fill').forEach(b => {
+            b.style.width = b.dataset.w + '%';
+          });
+        }, 150);
+      });
+
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function statCard(label, value, colorClass) {
+      return '<div class="summary-card">' +
+        '<p class="text-[10px] text-white/25 tracking-wider uppercase mb-1.5">' + label + '</p>' +
+        '<p class="text-2xl font-bold font-mono ' + colorClass + '">' + value + '</p>' +
+        '</div>';
     }
 
     function showError(msg) {
       document.getElementById('errorSection').classList.remove('hidden');
-      document.getElementById('errorMessage').textContent = msg || 'সমস্যা হয়েছে';
-      document.getElementById('errorDetail').textContent = '';
-      document.getElementById('errorSection').scrollIntoView({ behavior: 'smooth' });
+      document.getElementById('errorMsg').textContent = msg;
     }
-    function hideError() { document.getElementById('errorSection').classList.add('hidden'); }
-    function hideResult() { document.getElementById('resultSection').classList.add('hidden'); }
 
+    let jsonOpen = false;
     function toggleJson() {
-      jsonVisible = !jsonVisible;
-      document.getElementById('jsonContainer').classList.toggle('hidden', !jsonVisible);
-      document.getElementById('jsonChevron').style.transform = jsonVisible ? 'rotate(180deg)' : '';
-      document.getElementById('jsonToggleText').textContent = jsonVisible ? 'JSON লুকান' : 'JSON Response দেখুন';
+      jsonOpen = !jsonOpen;
+      document.getElementById('jsonBox').classList.toggle('hidden', !jsonOpen);
+      document.getElementById('jsonChev').style.transform = jsonOpen ? 'rotate(180deg)' : '';
+      document.getElementById('jsonToggleLabel').textContent = jsonOpen ? 'Hide JSON' : 'View JSON Response';
     }
 
-    async function runTest() {
-      const d = document.getElementById('testResult');
-      const p = document.getElementById('testOutput');
-      d.classList.remove('hidden');
-      p.textContent = 'Checking...';
-      try {
-        const r = await fetch(getApiBaseUrl() + '/api/test');
-        const data = await r.json();
-        p.textContent = JSON.stringify(data, null, 2);
-      } catch(e) {
-        p.textContent = 'Failed: ' + e.message;
-      }
+    function copyUrl() {
+      navigator.clipboard.writeText(document.getElementById('apiUrlBox').textContent)
+        .then(() => toast('URL copied', 'ok'))
+        .catch(() => toast('URL copied', 'ok'));
     }
 
-    function copyApiUrl() {
-      navigator.clipboard.writeText(document.getElementById('apiUrlDisplay').textContent)
-        .then(() => showToast('API URL কপি হয়েছে', 'success'))
-        .catch(() => { fallbackCopy(document.getElementById('apiUrlDisplay').textContent); showToast('কপি হয়েছে', 'success'); });
+    function toast(msg, type) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast-msg toast-' + (type || 'ok') + ' show';
+      clearTimeout(t._t);
+      t._t = setTimeout(() => t.classList.remove('show'), 2200);
     }
-    function copyCode(id) {
-      navigator.clipboard.writeText(document.getElementById(id).textContent)
-        .then(() => showToast('কোড কপি হয়েছে', 'success'))
-        .catch(() => { fallbackCopy(document.getElementById(id).textContent); showToast('কপি হয়েছে', 'success'); });
+
+    function esc(s) {
+      if (!s) return '';
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
     }
-    function fallbackCopy(text) {
-      const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px';
-      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-    }
-    function showToast(msg, type) {
-      const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast toast-' + (type||'success') + ' show';
-      clearTimeout(t._timer); t._timer = setTimeout(() => t.classList.remove('show'), 2500);
-    }
-    function escapeHtml(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
   </script>
 </body>
 </html>
