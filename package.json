@@ -1,7 +1,4 @@
 {
-  "name": "fraud-checker-api",
-  "version": "1.0.0",
-  "dependencies": {
-    "cheerio": "^1.0.0-rc.12"
-  }
+  "name": "alzeena-proxy",
+  "version": "1.0.0"
 }
