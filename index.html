@@ -346,7 +346,6 @@
     phoneInput.addEventListener('input', e => { e.target.value = e.target.value.replace(/[^0-9+]/g, ''); });
     phoneInput.addEventListener('keydown', e => { if (e.key === 'Enter') checkNumber(); });
 
-    // API URL দেখানো
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('apiUrlBox').textContent = location.origin + '/api/check?phone=01603746079';
     });
@@ -368,6 +367,9 @@
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
         const data = await resp.json();
 
+        // Debug: console-এ full response দেখাও
+        console.log('FULL API RESPONSE:', JSON.stringify(data, null, 2));
+
         if (data.success) {
           renderResult(data);
         } else {
@@ -388,7 +390,6 @@
 
       if (on) {
         btn.disabled = true;
-        icon.className = '';
         icon.style.display = 'none';
         const sp = document.createElement('div');
         sp.className = 'spinner';
@@ -399,7 +400,6 @@
       } else {
         btn.disabled = false;
         icon.style.display = '';
-        icon.className = 'fa-solid fa-magnifying-glass text-xs';
         const sp = document.getElementById('btnSpinner');
         if (sp) sp.remove();
         label.textContent = 'Search';
@@ -407,68 +407,76 @@
       }
     }
 
+    // ===== মেইন রেন্ডার ফাংশন — যেকোনো API structure handle করে =====
     function renderResult(data) {
       const el = document.getElementById('resultSection');
       el.classList.remove('hidden');
 
-      const courierData = data.data || {};
-      const entries = Object.entries(courierData).filter(([k]) =>
-        typeof courierData[k] === 'object' && courierData[k] !== null
-      );
+      // ডেটা খোঁজা — বিভিন্ন জায়গায় থাকতে পারে
+      let courierData = null;
+      const skipKeys = new Set(['success', 'status', 'phone', 'message', 'error', 'checked_at', 'source']);
 
-      // মোট হিসাব
+      if (data.data && typeof data.data === 'object') {
+        courierData = data.data;
+      } else {
+        // data-এর ভিতরে courier নামে object আছে কিনা চেক
+        const found = Object.entries(data).filter(([k, v]) => !skipKeys.has(k) && typeof v === 'object' && v !== null && Object.keys(v).length > 0);
+        if (found.length > 0) {
+          courierData = Object.fromEntries(found);
+        }
+      }
+
+      // Courier entries বের করা
+      let entries = [];
+      if (courierData) {
+        entries = Object.entries(courierData).filter(([k, v]) => typeof v === 'object' && v !== null);
+      }
+
+      // ===== Summary হিসাব =====
       let totalOrders = 0, totalDelivered = 0, totalCancelled = 0;
-      entries.forEach(([_, info]) => {
-        const keys = Object.keys(info);
-        keys.forEach(k => {
-          const lk = k.toLowerCase();
-          const v = parseInt(info[k]) || 0;
-          if (lk.includes('total') || lk.includes('parcel') || lk.includes('পার্সেল')) totalOrders += v;
-          if (lk.includes('deliver') || lk.includes('ডেলিভার')) totalDelivered += v;
-          if (lk.includes('cancel') || lk.includes('বাতিল')) totalCancelled += v;
-        });
+
+      entries.forEach(([name, info]) => {
+        const s = extractStats(info);
+        totalOrders += s.total;
+        totalDelivered += s.delivered;
+        totalCancelled += s.cancelled;
       });
 
+      // যদি কিছুই না পাওয়া যায়, তাহলে সব numeric value যোগ করে দেখো
+      if (totalOrders === 0 && entries.length > 0) {
+        entries.forEach(([name, info]) => {
+          Object.values(info).forEach(v => {
+            const n = parseFloat(v);
+            if (!isNaN(n) && n > 0) totalOrders += n;
+          });
+        });
+      }
+
       const successRate = totalOrders > 0 ? ((totalDelivered / totalOrders) * 100) : 0;
-
-      // রেট ক্লাস
-      let rateClass = '';
-      if (successRate >= 80) rateClass = '';
-      else if (successRate >= 50) rateClass = 'warning';
-      else rateClass = 'danger';
-
-      // বার ক্লাস
-      let barClass = 'green';
-      if (successRate < 50) barClass = 'red';
-      else if (successRate < 80) barClass = 'yellow';
+      let rateClass = successRate >= 80 ? '' : successRate >= 50 ? 'warning' : 'danger';
 
       let html = '';
 
-      // === সামারি সেকশন ===
+      // === সামারি ===
       html += '<div class="fade-up mb-8">';
-      // বড় রেট
       html += '<div class="text-center mb-6">';
       html += '<div class="rate-number ' + rateClass + '">' + successRate.toFixed(1) + '%</div>';
       html += '<p class="text-xs text-white/25 mt-1.5 tracking-wider uppercase">Success Rate</p>';
       html += '</div>';
 
-      // ফোন নম্বর ব্যাজ
       html += '<div class="flex justify-center mb-6">';
       html += '<div class="inline-flex items-center gap-2 bg-white/[0.04] border border-white/[0.06] rounded-full px-4 py-2">';
       html += '<i class="fa-solid fa-phone text-[10px] text-white/25"></i>';
       html += '<span class="text-sm font-mono text-white/60 tracking-wider">' + esc(data.phone || '') + '</span>';
-      html += '</div>';
-      html += '</div>';
+      html += '</div></div>';
 
-      // ৩টা স্ট্যাট কার্ড
       html += '<div class="grid grid-cols-3 gap-3">';
       html += statCard('TOTAL ORDERS', totalOrders, 'text-white/90');
       html += statCard('DELIVERED', totalDelivered, 'text-emerald-400');
       html += statCard('CANCELLED', totalCancelled, 'text-red-400');
-      html += '</div>';
-      html += '</div>';
+      html += '</div></div>';
 
-      // === কুরিয়ার ব্রেকডাউন ===
+      // === Courier Breakdown ===
       html += '<div class="fade-up fade-up-d2">';
       html += '<div class="flex items-center justify-between mb-4">';
       html += '<h3 class="text-xs font-semibold text-white/40 tracking-wider uppercase">Courier Breakdown</h3>';
@@ -478,36 +486,42 @@
       if (entries.length > 0) {
         html += '<div class="space-y-2.5">';
         entries.forEach(([name, info], idx) => {
-          let t = 0, d = 0, c = 0, r = 0;
-          Object.keys(info).forEach(k => {
-            const lk = k.toLowerCase();
-            const v = parseInt(info[k]) || 0;
-            if (lk.includes('total') || lk.includes('parcel') || lk.includes('পার্সেল')) t = v;
-            if (lk.includes('deliver') || lk.includes('ডেলিভার')) d = v;
-            if (lk.includes('cancel') || lk.includes('বাতিল')) c = v;
-            if (lk.includes('rate') || lk.includes('হার') || lk.includes('success')) r = parseFloat(String(info[k]).replace('%','')) || 0;
-          });
-          if (!r && t > 0) r = (d / t) * 100;
-          if (!t) t = d + c;
-
-          let bc = 'green';
-          if (r < 50) bc = 'red';
-          else if (r < 80) bc = 'yellow';
-
-          let rc = 'text-emerald-400';
-          if (r < 50) rc = 'text-red-400';
-          else if (r < 80) rc = 'text-amber-400';
+          const s = extractStats(info);
+          const rate = s.rate;
+          const bc = rate >= 80 ? 'green' : rate >= 50 ? 'yellow' : 'red';
+          const rc = rate >= 80 ? 'text-emerald-400' : rate >= 50 ? 'text-amber-400' : 'text-red-400';
 
           html += '<div class="courier-item fade-up" style="animation-delay:' + (0.08 * idx) + 's">';
           html += '<div class="flex items-center justify-between mb-2.5">';
           html += '<span class="text-sm font-semibold text-white/80">' + esc(name) + '</span>';
-          html += '<span class="text-xs font-mono ' + rc + '">' + r.toFixed(0) + '%</span>';
+          html += '<span class="text-xs font-mono ' + rc + '">' + rate.toFixed(0) + '%</span>';
           html += '</div>';
-          html += '<div class="progress-track mb-2.5"><div class="progress-fill ' + bc + '" data-w="' + Math.min(r,100) + '"></div></div>';
+          html += '<div class="progress-track mb-2.5"><div class="progress-fill ' + bc + '" data-w="' + Math.min(rate, 100) + '"></div></div>';
           html += '<div class="flex items-center justify-between">';
-          html += '<span class="text-[11px] text-white/25">' + t + ' parcels</span>';
-          html += '<span class="text-[11px] text-white/25">' + d + ' delivered &middot; ' + c + ' cancelled</span>';
+          html += '<span class="text-[11px] text-white/25">' + s.total + ' parcels</span>';
+          html += '<span class="text-[11px] text-white/25">' + s.delivered + ' delivered &middot; ' + s.cancelled + ' cancelled</span>';
           html += '</div>';
+
+          // অন্যান্য ফিল্ড দেখাও (যেগুলো total/delivered/cancelled/rate না)
+          const shown = new Set();
+          Object.keys(info).forEach(k => {
+            const lk = k.toLowerCase();
+            if (lk.includes('total') || lk.includes('parcel') || lk.includes('পার্সেল') ||
+                lk.includes('deliver') || lk.includes('ডেলিভার') ||
+                lk.includes('cancel') || lk.includes('বাতিল') ||
+                lk.includes('rate') || lk.includes('হার') || lk.includes('success')) {
+              shown.add(k);
+            }
+          });
+          const otherKeys = Object.keys(info).filter(k => !shown.has(k));
+          if (otherKeys.length > 0) {
+            html += '<div class="mt-2.5 pt-2.5 border-t border-white/[0.04] space-y-1">';
+            otherKeys.forEach(k => {
+              html += '<div class="flex justify-between"><span class="text-[11px] text-white/20">' + esc(k) + '</span><span class="text-[11px] text-white/40 font-mono">' + esc(String(info[k])) + '</span></div>';
+            });
+            html += '</div>';
+          }
+
           html += '</div>';
         });
         html += '</div>';
@@ -518,8 +532,34 @@
       }
       html += '</div>';
 
+      // === Debug Panel ===
+      html += '<div class="fade-up fade-up-d4 mt-6">';
+      html += '<button onclick="toggleDebug()" class="text-[11px] text-white/15 hover:text-white/30 transition-colors flex items-center gap-1.5">';
+      html += '<i class="fa-solid fa-bug text-[9px]"></i>';
+      html += '<span id="debugLabel">Debug: API Keys</span>';
+      html += '<i class="fa-solid fa-chevron-down text-[8px] transition-transform" id="debugChev"></i>';
+      html += '</button>';
+      html += '<div id="debugBox" class="hidden mt-3">';
+
+      // কী কী পেলাম তা দেখাও
+      html += '<div class="json-pre p-4 text-amber-400/60 font-mono text-[10px]">';
+      html += '<p class="text-white/30 mb-2">// Root keys: ' + Object.keys(data).join(', ') + '</p>';
+      if (data.data) {
+        html += '<p class="text-white/30 mb-2">// data.data keys: ' + Object.keys(data.data).join(', ') + '</p>';
+        entries.forEach(([name, info]) => {
+          html += '<p class="text-white/30 mb-1">// ' + esc(name) + ' keys: ' + Object.keys(info).join(', ') + '</p>';
+          html += '<p class="mb-2">// ' + esc(name) + ' values: ' + Object.entries(info).map(([k,v]) => k + '=' + v).join(' | ') + '</p>';
+        });
+      } else {
+        html += '<p class="text-white/30">// No data.data found. Showing all root entries:</p>';
+        Object.entries(data).forEach(([k, v]) => {
+          html += '<p class="mb-1">// ' + esc(k) + ': ' + esc(typeof v === 'object' ? JSON.stringify(v) : String(v)) + '</p>';
+        });
+      }
+      html += '</div></div></div>';
+
       // === JSON Toggle ===
-      html += '<div class="fade-up fade-up-d5 mt-6">';
+      html += '<div class="fade-up fade-up-d5 mt-4">';
       html += '<button onclick="toggleJson()" class="text-[11px] text-white/20 hover:text-white/40 transition-colors flex items-center gap-1.5">';
       html += '<i class="fa-solid fa-code text-[9px]"></i>';
       html += '<span id="jsonToggleLabel">View JSON Response</span>';
@@ -530,7 +570,7 @@
 
       el.innerHTML = html;
 
-      // প্রোগ্রেস বার অ্যানিমেট
+      // প্রোগ্রেস বার
       requestAnimationFrame(() => {
         setTimeout(() => {
           el.querySelectorAll('.progress-fill').forEach(b => {
@@ -542,11 +582,70 @@
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
+    // ===== স্ট্যাটস বের করা — সব possible key format handle করে =====
+    function extractStats(info) {
+      const keys = Object.keys(info);
+      let total = 0, delivered = 0, cancelled = 0, rate = 0;
+
+      // প্রথমে exact match চেক
+      keys.forEach(k => {
+        const lk = k.toLowerCase().trim();
+        const v = parseFloat(info[k]) || 0;
+
+        if (lk === 'total' || lk === 'total_parcels' || lk === 'total_orders' || lk === 'total_parcel' || lk === 'parcels') {
+          total = v;
+        } else if (lk === 'delivered' || lk === 'deliver' || lk === 'delivery' || lk === 'delivered_count') {
+          delivered = v;
+        } else if (lk === 'cancelled' || lk === 'cancel' || lk === 'canceled' || lk === 'cancelled_count') {
+          cancelled = v;
+        } else if (lk === 'success_rate' || lk === 'rate' || lk === 'success_percentage') {
+          rate = parseFloat(String(info[k]).replace('%', '')) || 0;
+        }
+      });
+
+      // যদি exact match-এ না পাওয়া যায়, includes দিয়ে চেক
+      if (total === 0) {
+        keys.forEach(k => {
+          const lk = k.toLowerCase();
+          const v = parseFloat(info[k]) || 0;
+          if (lk.includes('total') && !lk.includes('deliver') && !lk.includes('cancel')) total = v;
+        });
+      }
+      if (total === 0) {
+        keys.forEach(k => {
+          const lk = k.toLowerCase();
+          const v = parseFloat(info[k]) || 0;
+          if ((lk.includes('parcel') || lk.includes('পার্সেল') || lk.includes('order')) && !lk.includes('deliver') && !lk.includes('cancel')) total = v;
+        });
+      }
+      if (delivered === 0) {
+        keys.forEach(k => {
+          const lk = k.toLowerCase();
+          const v = parseFloat(info[k]) || 0;
+          if (lk.includes('deliver') && !lk.includes('cancel')) delivered = v;
+        });
+      }
+      if (cancelled === 0) {
+        keys.forEach(k => {
+          const lk = k.toLowerCase();
+          const v = parseFloat(info[k]) || 0;
+          if (lk.includes('cancel')) cancelled = v;
+        });
+      }
+
+      // যদি rate না পাওয়া যায়, calculate
+      if (!rate && total > 0) rate = (delivered / total) * 100;
+
+      // যদি total এখনো 0 হয়, delivered + cancelled দিয়ে
+      if (total === 0) total = delivered + cancelled;
+
+      return { total, delivered, cancelled, rate: rate || 0 };
+    }
+
     function statCard(label, value, colorClass) {
       return '<div class="summary-card">' +
         '<p class="text-[10px] text-white/25 tracking-wider uppercase mb-1.5">' + label + '</p>' +
-        '<p class="text-2xl font-bold font-mono ' + colorClass + '">' + value + '</p>' +
-        '</div>';
+        '<p class="text-2xl font-bold font-mono ' + colorClass + '">' + value + '</p></div>';
     }
 
     function showError(msg) {
@@ -554,12 +653,17 @@
       document.getElementById('errorMsg').textContent = msg;
     }
 
-    let jsonOpen = false;
+    let jsonOpen = false, debugOpen = false;
     function toggleJson() {
       jsonOpen = !jsonOpen;
       document.getElementById('jsonBox').classList.toggle('hidden', !jsonOpen);
       document.getElementById('jsonChev').style.transform = jsonOpen ? 'rotate(180deg)' : '';
       document.getElementById('jsonToggleLabel').textContent = jsonOpen ? 'Hide JSON' : 'View JSON Response';
+    }
+    function toggleDebug() {
+      debugOpen = !debugOpen;
+      document.getElementById('debugBox').classList.toggle('hidden', !debugOpen);
+      document.getElementById('debugChev').style.transform = debugOpen ? 'rotate(180deg)' : '';
     }
 
     function copyUrl() {
